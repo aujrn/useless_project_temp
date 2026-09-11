@@ -1,846 +1,849 @@
-# Random Relay — Agent Specification
+# Random Relay — Next Iteration: Make It Funny
 
-## 1. Product Definition
+## Purpose
 
-**Random Relay** is a deliberately unreliable messaging simulator.
+This iteration keeps the existing Random Relay functionality intact and adds a **deliberately funny personality** to the product.
 
-Core concept:
+The humor should feel like a beautifully designed Apple-style product that was unfortunately designed by someone who deeply misunderstood the concept of messaging.
 
-> A perfectly functional messaging app deliberately designed to make communication unreliable.
+The app should look polished enough to be taken seriously.
 
-The sender enters a message. The system randomly chooses an encoder and independently chooses a decoder. The message reaches the receiver correctly only when the decoder matches the encoder.
+The app's behavior should make that seriousness increasingly difficult to maintain.
 
-This is a simulation, not real secure encryption, real networking, or a production messaging service.
-
----
-
-## 2. Core User Flow
-
-1. User enters plaintext in the Sender panel.
-2. User presses Send.
-3. The simulation selects an encoder according to the active simulation mode.
-4. The plaintext is encoded into a payload.
-5. The payload travels through the central relay.
-6. The simulation selects a decoder.
-7. The decoder attempts to decode the payload.
-8. If encoder and decoder are the compatible pair, the original plaintext is delivered.
-9. Otherwise, the receiver displays deterministic, plausible gibberish/corruption.
-10. The transmission is recorded in session statistics and transmission details.
-11. After failure, the user can retry the exact same plaintext.
+> **Design principle:** Premium interface. Questionable engineering. Completely unnecessary suffering.
 
 ---
 
-## 3. Encoder / Decoder Model
+# 1. Humor Direction
 
-The application contains **10 paired reversible systems**:
+Use **dry, deadpan, understated humor**.
 
-1. Caesar Shift, +3 / -3
-2. Atbash Substitution
-3. Reverse + Invert Case
-4. XOR Demonstration, `0x5A`
-5. Base64 Representation
-6. Vigenère, key `ENIGMA`
-7. 8-bit Binary Stream
-8. Rail Fence Transposition, 3 rails
-9. Hexadecimal Byte Stream
-10. Symbol Token Substitution
+Do NOT turn the interface into a meme wall.
 
-Each system must have a compatible encoder and decoder identified by a shared pair/system ID.
+Do NOT make every button a joke.
 
-### Important
+Do NOT use loud colors, cartoon graphics, excessive emojis, or chaotic copy.
 
-- Use the terms **encode/decode** and **encoder/decoder**.
-- Do not describe these systems as secure encryption.
-- Every compatible encode → decode path must reproduce the original supported plaintext.
-- A mismatched decoder must not silently reproduce the original plaintext.
+The comedy should come from the contrast between:
 
----
+- extremely polished UI
+- extremely elaborate transmission process
+- extremely low probability of success
+- completely unnecessary architecture
+- confident system language
+- occasional absurd commentary
 
-## 4. Simulation Modes
+Think:
 
-Provide three modes:
-
-### Random
-
-- Encoder is selected randomly.
-- Decoder is selected independently and randomly.
-- Success probability is theoretically `1/N`, where `N` is the number of active systems.
-
-### Guaranteed Success
-
-- Select a valid encoder/decoder pair.
-- Always produce a successful transmission.
-- Still show the normal relay animation and telemetry.
-
-### Guaranteed Failure
-
-- Select an encoder and a different decoder.
-- Always produce a failed transmission.
-- If `N = 1`, guaranteed failure is mathematically impossible and the UI must explain this rather than faking a result.
-
-These modes exist primarily to make demonstrations reliable.
+> "Your message has been carefully routed through 10 independent systems. There was no reason to do this."
 
 ---
 
-## 5. Transmission Timeline
+# 2. Product Voice
 
-Normal simulation sequence:
+The product should sound like a calm, overconfident technical system.
 
-```text
-0ms       Send tapped
-100ms     Encoder selected
-250ms     Encoding
-500ms     Payload transmitted
-700ms     Decoder selected
-900ms     Decoding
-1100ms    Receiver delivery
-```
+### Voice characteristics
 
-Animation speed settings may scale this sequence:
+- confident
+- concise
+- slightly passive-aggressive
+- technically plausible
+- unnecessarily formal
+- occasionally self-aware
+- never desperate for laughs
 
-- **Normal:** approximately 1.1 seconds total
-- **Fast:** approximately 0.55 seconds total
-- **Instant:** no meaningful animation delay
+### Good
 
-The exact implementation may use event scheduling rather than literal fixed delays, but the visual order must remain clear.
+- "Transmission initiated."
+- "Selecting an encoder."
+- "Payload is now traveling."
+- "Decoder selected."
+- "Compatibility: unfortunate."
+- "Message recovered successfully."
+- "The systems agree."
+- "The systems do not agree."
+- "This could have been a text field."
+- "Probability was consulted."
+- "Statistically, this was expected."
+- "A perfectly reasonable 20% chance."
+- "Please enjoy the consequences of randomness."
 
----
+### Avoid
 
-## 6. Relay Visual System
-
-The **Central Transmission Relay** is the visual centerpiece.
-
-Desktop composition:
-
-```text
-Sender        Relay        Receiver
-  │             │              │
-  │          Encoder           │
-  │             ↓              │
-  │          PAYLOAD           │
-  │             ↓              │
-  │          Decoder           │
-  │             │              │
-  └─────────────┴──────────────┘
-```
-
-The relay must communicate the journey without becoming oversized or distracting.
-
-### Relay interactions
-
-- Encoder selection uses a subtle shuffle animation through candidate names before settling on the selected encoder.
-- Decoder selection uses the same treatment.
-- The selected system ends with a clear confirmation/checkmark.
-- A traveling illuminated payload indicator moves from encoder toward decoder.
-- The receiver begins with a short glyph/glitch scramble before resolving to the final result.
-- Successful decoding resolves to the original message.
-- Failed decoding resolves to deterministic corruption/gibberish.
-
-Reduced-motion mode must simplify or remove these animations.
+- "LOL"
+- "OMG"
+- "BRO"
+- excessive meme slang
+- constant jokes
+- fake error messages for normal failures
+- humor that makes the app feel unfinished
 
 ---
 
-## 7. Failure Corruption
+# 3. Relay Humor
 
-A mismatched decoder must produce output that looks intentionally corrupted rather than randomly crashing or producing unusable UI.
+The central relay is the main comedy stage.
 
-Requirements:
+Keep the existing four-layer architecture:
 
-- Deterministic for a given relevant transmission state.
-- Plausible visual gibberish/glitch output.
-- Must not accidentally equal the original plaintext.
-- Must preserve application stability for Unicode, emoji, long messages, and unusual characters.
+1. Sender Node
+2. Encoder Node
+3. Transmission Path
+4. Decoder Node
 
-Example visual progression:
+Add small pieces of dry commentary around the existing state labels.
 
-```text
-░▒▓!?#*&...
-        ↓
-Corrupted output
-```
+## Idle
 
-The corruption system is presentation/simulation logic, not a claim about real cryptographic behavior.
+Primary:
 
----
+> Ready to transmit.
 
-## 8. Retry Same Message
+Secondary:
 
-After a failed transmission, expose:
+> Nothing has gone wrong yet.
 
-**Try Again**
+## Selecting encoder
 
-Retry must:
+Primary:
 
-- Reuse the exact same plaintext.
-- Start a new transmission.
-- Randomly select encoder/decoder again in Random mode.
-- Increment the attempt counter.
-- Preserve the session statistics.
+> Choosing an encoder…
 
-Example:
+Secondary:
 
-```text
-Attempt 1  ✗ Decoder mismatch
-Attempt 2  ✗ Decoder mismatch
-Attempt 3  ✓ Successfully decoded
-```
+> There are several perfectly good options. We will pick one at random.
 
-Show a subtle success state such as:
+## Encoding
 
-> Decoded on attempt #3
+Primary:
 
----
+> Encoding payload…
 
-## 9. Failure Explanation
+Secondary:
 
-A failed transmission should explain the mismatch clearly.
+> Making the message unnecessarily complicated.
 
-Example:
+## Transit
 
-```text
-Encoder 02
-Atbash
+Primary:
 
-        ↓
+> Payload in transit
 
-Decoder 05
-Binary Stream
+Secondary:
 
-        ↓
+> It is traveling approximately nowhere.
 
-No compatible decoder
-```
+## Decoder selection
 
-Follow with a human-readable explanation:
+Primary:
 
-> The receiver didn't have the right decoder.
+> Choosing a decoder…
 
-Avoid cryptographic jargon when a simple explanation is clearer.
+Secondary:
 
----
+> Hopefully the correct one.
 
-## 10. Session Statistics
+## Match
 
-Maintain compact session-level statistics:
+Primary:
 
-```text
-TRANSMISSIONS
-17
+> Decoder matched.
 
-✓ 4 successful
-✗ 13 failed
+Secondary:
 
-Success rate
-23.5%
+> Against all odds.
 
-Expected
-20%
-```
+## Mismatch
 
-Track at minimum:
+Primary:
 
-- Total transmissions
-- Successful transmissions
-- Failed transmissions
-- Success rate
-- Expected probability
-- Current attempt number
+> Decoder mismatch.
 
-Do not turn this into a large analytics dashboard. The project should remain visually simple.
+Secondary:
+
+> The message has been interpreted incorrectly, with confidence.
 
 ---
 
-## 11. Probability
+# 4. Sender Humor
 
-With `N` active systems:
+The Sender should remain visually clean.
 
-```text
-P(success) = 1/N
-```
+Add humor only where it does not interfere with the messaging experience.
 
-Examples:
+### Attempt counter
 
-- 3 systems → 33.3%
-- 5 systems → 20%
-- 10 systems → 10%
+Normal:
 
-The probability ring must dynamically reflect the exact theoretical probability.
+> Attempt 1
 
-When changing the number of active systems, animate the displayed probability where animation is enabled.
+Occasionally after repeated failures:
 
-Optional supporting message:
+> Attempt 4  
+> We remain optimistic.
 
-> Your odds just got worse.
+After 5+ attempts:
 
----
+> Attempt 6  
+> This is becoming a lifestyle.
 
-## 12. 100-Message Experiment
+After 10+ attempts:
 
-Provide an optional **Run Experiment** feature.
+> Attempt 11  
+> Statistically, we have learned nothing.
 
-The experiment automatically runs 100 simulated transmissions using the active system count and selected simulation rules.
-
-Display:
-
-```text
-100 TRANSMISSIONS
-
-Successful       18
-Failed           82
-
-Actual           18%
-Expected         20%
-
-Difference       -2%
-```
-
-For Random mode, actual results are expected to vary around the theoretical probability.
-
-The experiment should not require 100 full-speed UI animations if that would become slow or annoying. It may use a compact progress treatment or accelerated simulation.
-
-### Live probability visualization
-
-During or after the experiment, optionally show a simple line chart of cumulative success rate with an expected-probability reference marker.
-
-Do not build a complex charting framework.
+Do not make these messages appear every time. Use milestone-based copy.
 
 ---
 
-## 13. Uselessness Score
+# 5. Receiver Humor
 
-Optional theme feature: a deliberately meaningless **Uselessness Score**.
+## Successful message
 
-Example:
+Keep success visually obvious.
 
-```text
-USELESSNESS
+Primary:
 
-████████████████░░░░
-84%
+> Message received.
 
-84% useless. Excellent.
-```
+Secondary rotating variants:
 
-Possible inputs:
+- "The systems agree."
+- "Against all odds."
+- "A rare moment of competence."
+- "The decoder knew what it was doing."
+- "Probability has briefly been kind."
 
-- Messages sent
-- Failed messages
-- Retries
-- Time spent
-- Number of active systems
+## Failed message
 
-The score is entertainment only and must never be presented as a meaningful productivity metric.
+Primary:
 
----
+> Message corrupted.
 
-## 14. Easter Eggs / Achievements
+Secondary rotating variants:
 
-Use only a small number of hidden reactions.
+- "The decoder and encoder disagreed."
+- "Technically, something arrived."
+- "The payload survived. Its meaning did not."
+- "A message was received. It was not your message."
+- "The system has produced modern art."
+- "Please do not attempt to interpret this."
 
-Examples:
-
-- After 10 consecutive failures:
-  > Are you sure you want to keep doing this?
-- After 10 successful messages:
-  > Suspiciously competent.
-- After 100 messages:
-  > You could have just texted them.
-
-Optional achievements may reward unusual simulation behavior.
-
-These must not interrupt the primary flow.
+Keep corrupted payload itself visually interesting, but never make the failure look like a technical bug.
 
 ---
 
-## 15. Transmission Details
+# 6. Probability Ring Humor
 
-Transmission Details should be expandable/progressive-disclosure UI.
+The probability ring should remain mathematically accurate.
 
-Include:
+Add subtle commentary beneath it.
+
+For N = 1:
+
+> 100% chance  
+> We have discovered a functioning messaging system.
+
+For N = 2:
+
+> 50% chance  
+> Coin-flipping, but with infrastructure.
+
+For N = 3:
+
+> 33.3% chance  
+> This is already getting irresponsible.
+
+For N = 5:
+
+> 20% chance  
+> Bold strategy.
+
+For N = 10:
+
+> 10% chance  
+> Excellent architecture. Terrible odds.
+
+For larger values:
+
+> <probability>% chance  
+> We strongly recommend lowering your expectations.
+
+Do not alter the mathematical calculation for the joke.
+
+---
+
+# 7. Random Mode
+
+Random mode should feel like the normal, respectable mode.
+
+Add a small description:
+
+> **Random**
+>
+> Let fate handle routing.
+
+Optional tooltip:
+
+> Every transmission independently chooses an encoder and decoder.
+
+---
+
+# 8. Guaranteed Success Mode
+
+This mode should feel suspiciously competent.
+
+Label:
+
+> Guaranteed Success
+
+Description:
+
+> The system has been instructed to behave.
+
+When transmitting:
+
+> Selecting compatible systems…
+
+After success:
+
+> Success guaranteed.  
+> We have temporarily removed the fun.
+
+---
+
+# 9. Guaranteed Failure Mode
+
+This mode should be treated as a controlled experiment in bad decisions.
+
+Label:
+
+> Guaranteed Failure
+
+Description:
+
+> The system has been instructed to disappoint you.
+
+During transmission:
+
+> Selecting incompatible systems…
+
+After failure:
+
+> Failure guaranteed.  
+> Finally, some consistency.
+
+---
+
+# 10. Retry Button
+
+Keep retry behavior exactly the same: retry the **same plaintext** and increment the attempt count.
+
+Change the copy based on state.
+
+After first failure:
+
+> Try again
+
+After 2 failures:
+
+> Try again
+
+After 4 failures:
+
+> One more time
+
+After 7 failures:
+
+> Surely now
+
+After 10 failures:
+
+> This is fine
+
+The button itself should remain normal and usable.
+
+Do not make the user hunt for the action.
+
+---
+
+# 11. Transmission Details Humor
+
+Keep telemetry accurate.
+
+Possible labels:
 
 - Encoder ID
-- Encoder name
-- Raw encoded payload
-- One-click copy button
 - Decoder ID
-- Decoder name
-- Match: Yes / No
-- Result: Success / Failure
-- Attempt number
+- Match
+- Attempt
+- Raw Payload
+- Recovery Status
 
-Copy feedback should briefly replace the copy control state with a checkmark/confirmation.
+Add a tiny optional footer:
 
----
+> No meaningful data was harmed during transmission.
 
-## 16. Expanded Transmission Timeline
+For mismatches:
 
-The telemetry view may expand into a readable event timeline:
+> Payload integrity: technically intact. Meaning: questionable.
 
-```text
-✓ Message created
-      ↓
-✓ Encoder 03 selected
-      ↓
-✓ Message encoded
-      ↓
-✓ Payload transmitted
-      ↓
-✓ Decoder 07 selected
-      ↓
-✗ Decoder mismatch
-      ↓
-✗ Message corrupted
-```
+For successful recovery:
 
-This should remain collapsed by default unless the user enables transmission details.
+> Payload integrity: suspiciously good.
 
 ---
 
-## 17. Settings / Active Systems Browser
+# 12. 100-Message Experiment
 
-Settings must support:
+The experiment should be one of the funniest parts because it produces serious-looking statistics for an intentionally ridiculous system.
 
-### Active systems
+Header:
 
-- Stepper from 1–10.
-- Presets: 3, 5, 10.
-- Active Systems Browser listing every enabled system.
-- Each system has a human-readable description.
+> 100-Message Experiment
 
-### Animation
+Description:
 
-- Normal
-- Fast
-- Instant
+> Send 100 messages through the relay and observe probability doing its job.
 
-### Behavior toggles
+During experiment:
 
-- Show transmission details
-- Animate decoding
-- Sound effects
-- Reduced motion where applicable
+> Running experiment…
 
-### Audio
+Secondary:
 
-Audio preferences should persist through `localStorage`.
+> This is scientifically unnecessary.
 
----
+Progress:
 
-## 18. Audio System
+> 37 / 100
 
-Use a zero-dependency Web Audio synthesizer.
+Occasional milestone messages:
 
-Sounds:
+### 25 messages
 
-- Soft keyboard/click sound when sending.
-- Subtle transit hum.
-- Crystal-like two-tone success chime.
-- Soft mismatch/failure tone.
+> Quarter complete.  
+> We have learned very little.
 
-Rules:
+### 50 messages
 
-- Audio is off by default if browser autoplay restrictions require it.
-- No sound before user interaction.
-- Header speaker control clearly shows enabled/disabled state.
-- Settings provides the same audio preference.
-- Bulk experiments must not become an irritating wall of repeated sounds.
-- Audio preference persists locally.
+> Halfway there.  
+> The spreadsheet would like this.
 
----
+### 75 messages
 
-## 19. Message Metadata
+> 75% complete.  
+> Surely this information will be useful.
 
-Each transmission may expose lightweight metadata such as:
+### 100 messages
 
-- Attempt number
-- Timestamp or relative transmission time
-- Encoder/decoder IDs
-- Match state
-- Result state
+> Experiment complete.
 
-Metadata should support the simulation rather than make the interface look like a real enterprise messaging platform.
+Secondary:
+
+> The results are exactly as unnecessary as expected.
 
 ---
 
-## 20. Reset Behavior
+# 13. Experiment Results
 
-**Reset Conversation** must reset the current simulation state:
+Keep the actual data and graph mathematically correct.
 
-```text
-Messages        ✓ reset
-Statistics      ✓ reset
-Attempts        ✓ reset
-Uselessness     ✓ reset
-Experiment      ✓ reset
-```
+Show:
 
-Settings/preferences should remain intact.
+- Messages
+- Successful
+- Failed
+- Actual success rate
+- Expected success rate
 
-If desired, provide a separate **Reset All Settings** action for preferences.
+Then add a deadpan interpretation.
 
----
+### Example
 
-## 21. Sender UI
+> Observed: 18%  
+> Expected: 20%
 
-The Sender panel should provide:
+Commentary:
 
-- Clear message composer.
-- Send action.
-- Useful example/quick prompt chips where already implemented.
-- Keyboard-friendly interaction.
-- Clear sending state during simulation.
+> Close enough for a system that should not exist.
 
-The sender should make it obvious what plaintext is being transmitted.
+If observed is unusually close:
 
----
+> Remarkably consistent.
 
-## 22. Receiver UI
+If observed is far from expected:
 
-The Receiver panel should show:
+> Probability appears to have developed opinions.
 
-- Delivered message on success.
-- Corrupted/gibberish result on failure.
-- Clear success/failure state.
-- Attempt number where relevant.
-- Human-readable failure explanation.
-- Retry action after failure.
+If N = 1:
 
-Success/failure must not rely on color alone.
+> 100%  
+> Congratulations. You invented normal messaging.
 
 ---
 
-## 23. Visual Design
+# 14. Uselessness Score
 
-Maintain the existing Apple-inspired visual direction:
+If the existing implementation includes a Uselessness Score, lean into it.
 
-- Clean typography.
-- Generous spacing.
-- Subtle material/surface hierarchy.
-- Restrained animation.
-- Light and dark appearance.
-- Clear focus states.
-- Central relay as the visual centerpiece.
+Example:
 
-The app should feel polished without becoming a generic corporate dashboard.
+> **Uselessness Score**
+>
+> 97 / 100
+>
+> Excellent work.  
+> Almost completely unnecessary.
 
----
+Possible factors:
 
-## 24. Responsive Layout
+- Number of systems
+- Random mismatch rate
+- Transmission complexity
+- Attempts required
+- Number of UI steps
+- Experiment usage
 
-### Desktop
+The score should remain deterministic from real metrics.
 
-```text
-Sender | Relay | Receiver
-```
-
-### Tablet
-
-Maintain the three-part concept while adapting spacing and widths.
-
-### Mobile
-
-```text
-Sender
-  ↓
-Relay
-  ↓
-Receiver
-```
-
-Test specifically:
-
-- Long encoded payloads.
-- Long plaintext messages.
-- Settings sheet/modal.
-- Probability ring.
-- Transmission details.
-- Horizontal overflow.
-- Composer keyboard behavior.
+Do not fake the score randomly.
 
 ---
 
-## 25. Accessibility
+# 15. Easter Eggs
 
-Verify:
+Keep these subtle.
 
-- Keyboard-only operation.
-- Logical Tab navigation.
-- Enter sends when appropriate.
-- Escape closes settings/modal UI.
-- Correct semantic controls.
-- Appropriate `aria-label`s.
-- Focus returns correctly after modal close.
-- Screen-reader status updates for encoding, transmission, decoder selection, success, and failure.
-- Success/failure is communicated with text/icons, not color alone.
-- Reduced-motion behavior removes or simplifies nonessential motion.
+### Achievement: First Success
 
----
+> **It Worked**
+>
+> You successfully sent a message.  
+> This was not guaranteed.
 
-## 26. Algorithm Testing
+### Achievement: Five Attempts
 
-All 10 systems must be tested, not only the most obvious ones.
+> **Persistence**
+>
+> You could have copied and pasted the message.
 
-Test inputs should include:
+### Achievement: Ten Attempts
 
-```text
-Hello World!
-1234567890
-@#$%^&*()
-Mixed CASE
-emoji 😀🚀
-Malayalam മലയാളം
-empty string
-very long message
-newlines
-tabs
-```
+> **Commitment**
+>
+> At this point, the project has won.
 
-Particular attention is required for byte-oriented transformations, Base64, XOR, binary, hexadecimal, and symbol mappings.
+### Achievement: 100 Messages
 
-For every compatible pair:
+> **Researcher**
+>
+> You have generated statistically meaningful evidence for something nobody asked for.
 
-```text
-encode → decode = original
-```
+### Achievement: N = 1
 
-The implementation must remain stable for Unicode and emoji.
+> **Efficiency**
+>
+> You removed the entire point of Random Relay.
+
+Achievements should never interrupt the core send/receive flow.
 
 ---
 
-## 27. Automated Tests
+# 16. Empty State
 
-Provide a lightweight test suite where practical.
+Sender:
 
-Minimum compatible-pair coverage:
+> Nothing to transmit.
 
-```text
-✓ Caesar
-✓ Atbash
-✓ Reverse
-✓ XOR
-✓ Base64
-✓ Vigenère
-✓ Binary
-✓ Rail Fence
-✓ Hex
-✓ Symbol Token
+Secondary:
 
-10/10 algorithms reversible
-```
+> Type something. We have already built the infrastructure.
 
-Also verify mismatched pairs do not return the original plaintext:
+Receiver:
 
-```text
-Encoder 01 + Decoder 02
-→ must not silently produce original plaintext
-```
+> Waiting for a message.
 
-The test suite should focus on the actual project algorithms and simulation invariants, not require a large testing framework.
+Secondary:
+
+> It may arrive correctly. This is not guaranteed.
 
 ---
 
-## 28. Project Structure
+# 17. Error Handling Humor
 
-Target structure:
+Real application errors must remain understandable.
 
-```text
-random-relay/
-│
-├── index.html
-├── README.md
-│
-├── css/
-│   └── styles.css
-│
-├── js/
-│   ├── algorithms.js
-│   ├── simulation.js
-│   ├── audio.js
-│   ├── ui.js
-│   ├── app.js
-│   └── bundle.js
-│
-├── develop/
-│   ├── algorithms.js
-│   ├── simulation.js
-│   ├── audio.js
-│   ├── ui.js
-│   ├── app.js
-│   ├── agent.md
-│   ├── design.md
-│   ├── implementation_plan.md
-│   └── walkthrough.md
-│
-└── tests/
-    ├── algorithms.test.js
-    └── simulation.test.js
-```
+Use humor only as secondary copy.
 
-If `develop/` is the source-of-truth directory, document that clearly in the README and avoid unnecessary duplication.
+Example:
+
+> Unable to transmit.
+>
+> Something genuinely went wrong.
+>
+> Please try again.
+
+Do NOT disguise real errors as jokes.
+
+The user should always understand what action to take.
 
 ---
 
-## 29. Technical Architecture
+# 18. Header / Settings
 
-Use a standalone, zero-dependency web application.
+Keep the header minimal.
 
-Preferred characteristics:
+Potential subtitle under Random Relay:
 
-- Vanilla HTML/CSS/JavaScript.
-- Modular JavaScript responsibilities.
-- Event-driven simulation state.
-- No backend required.
-- No database.
-- No authentication.
-- No accounts.
-- No contacts.
-- No cross-device persistence.
-- No real network messaging.
-- No real encryption/security claims.
+> Reliable messaging, redesigned by probability.
 
-The application should run directly where practical and through a simple local static server when needed, for example:
+Alternative:
 
-```bash
-python -m http.server 8000
-```
+> A messaging system with commitment issues.
+
+Alternative:
+
+> Because ordinary messaging was apparently too reliable.
+
+Use only one subtitle at a time.
 
 ---
 
-## 30. Demo Reliability
+# 19. Microcopy Rotation Rules
 
-The hackathon demo must be predictable.
+Do not randomly change copy every few milliseconds.
 
-Recommended demo sequence:
+Use deterministic state-based or milestone-based variants.
 
-1. Set a visible system count such as `N = 5`.
-2. Enter a recognizable message such as:
-   `Are you coming to the hackathon?`
-3. Send in Random mode.
-4. Show encoder shuffle.
-5. Show payload traveling through the relay.
-6. Show decoder shuffle.
-7. Show mismatch and corrupted receiver output if it occurs.
-8. Use **Try Again** with the exact same message.
-9. Demonstrate a successful retry.
-10. Open Transmission Details to explain the encoder/decoder mismatch.
-11. Show `1/N` probability and session statistics.
-12. Optionally demonstrate Guaranteed Success/Failure or Run Experiment.
+Good:
 
-Guaranteed modes exist specifically so the demo does not depend on luck.
+- success variant changes between transmissions
+- retry humor changes at attempt milestones
+- experiment humor changes at 25/50/75/100
+- probability commentary changes with N
+
+Bad:
+
+- text constantly flickering
+- jokes changing while reading
+- random commentary on every render
+- animation making content difficult to scan
 
 ---
 
-## 31. Implementation Priorities
+# 20. Animation + Humor
 
-### Must-have
+The animation system should remain elegant.
 
-1. Retry exact same message.
-2. Session statistics.
-3. Guaranteed Success / Guaranteed Failure modes.
-4. Test all 10 algorithms.
-5. Accessibility pass.
-6. Mobile pass.
-7. Correct reset behavior.
-8. Proper README.
+Humor comes from **what the animation communicates**, not from making it silly.
 
-### Strong additions
+Example:
 
-9. Expanded transmission timeline.
-10. Better failure explanation.
-11. 100-message experiment.
-12. Actual vs expected probability visualization.
-13. Uselessness score.
+A beautifully animated payload travels through the relay.
 
-### Fun polish
+Then:
 
-14. Easter eggs.
-15. Achievements.
-16. Optional Spy Mode.
+> Decoder mismatch.
 
----
+That contrast is funnier than a bouncing cartoon.
 
-## 32. Scope Guardrails
+Keep:
 
-Do **not** spend development time on:
+- subtle particle motion
+- encoder shuffle
+- decoder shuffle
+- scramble/glitch
+- success/failure transitions
+- reduced-motion support
 
-- More algorithms.
-- Login/authentication.
-- Backend infrastructure.
-- Database infrastructure.
-- Real networking.
-- Real encryption.
-- Accounts.
-- Contacts.
-- Cross-device chat persistence.
-
-These features undermine the intentionally useless premise and add complexity without improving the core demonstration.
+Do not add cartoon physics.
 
 ---
 
-## 33. Product Personality
+# 21. Visual Comedy
 
-The product should be:
+Use visual contrast.
 
-- Technically coherent.
-- Visually polished.
-- Easy to understand within seconds.
-- Slightly absurd.
-- Demonstrably useless.
-- Educational about probability and encoding/decoding concepts.
+The relay should look like it belongs in a premium operating system.
 
-The humor should emerge from the system behaving correctly while producing an inconvenient outcome.
+Then occasionally reveal absurd details:
 
-The central joke is not that the software is broken.
+- "Transmission complexity: High"
+- "Practical necessity: Low"
+- "Probability: 20%"
+- "Systems consulted: 5"
+- "Reason for existence: Unknown"
 
-The central joke is that **the software works exactly as designed, and the design is a terrible idea.**
-
----
-
-## 34. Final Acceptance Criteria
-
-The current iteration is complete when:
-
-- [ ] Sender can submit a plaintext message.
-- [ ] Active systems can be configured from 1–10.
-- [ ] Ten paired reversible systems are available.
-- [ ] Random mode independently selects encoder and decoder.
-- [ ] Correct pairs reproduce the original plaintext.
-- [ ] Mismatched pairs produce stable corruption/gibberish.
-- [ ] Encoder and decoder shuffle animations work.
-- [ ] Payload visibly travels through the relay.
-- [ ] Receiver scramble/resolve animation works when enabled.
-- [ ] Retry resends the exact same plaintext.
-- [ ] Attempt counter is accurate.
-- [ ] Guaranteed Success works.
-- [ ] Guaranteed Failure works when `N > 1` and is mathematically explained when `N = 1`.
-- [ ] Session statistics are accurate.
-- [ ] The probability ring reflects `1/N`.
-- [ ] Transmission details show the actual encoder, payload, decoder, match, and result.
-- [ ] Payload copy works.
-- [ ] Settings persist appropriate preferences through `localStorage`.
-- [ ] Audio respects user preference and browser interaction rules.
-- [ ] Reduced motion is respected.
-- [ ] Reset Conversation resets session state but not settings.
-- [ ] Mobile layout has no problematic horizontal overflow.
-- [ ] Keyboard and screen-reader interaction are usable.
-- [ ] All 10 algorithms pass compatible encode/decode tests.
-- [ ] Unicode, emoji, long strings, newlines, and tabs are handled safely.
-- [ ] Mismatched algorithm tests verify that the original plaintext is not silently recovered.
-- [ ] The project can run as a standalone static web app.
-- [ ] README explains the concept, setup, controls, probability model, and scope.
+These should feel like legitimate telemetry.
 
 ---
 
-## 35. Final Principle
+# 22. Optional 'Why?' Panel
 
-Do not optimize Random Relay toward becoming a better messenger.
+Add a small expandable panel:
 
-Optimize it toward becoming a **better demonstration of why this messenger is useless**.
+> **Why does this exist?**
 
-The ideal user reaction is:
+Expanded:
 
-> "Why does this exist?"
+> Because someone asked for a useless project.
+>
+> So we built a messaging system where the sender and receiver independently choose incompatible ways to understand the same message.
+>
+> The result is technically valid, statistically predictable, and completely unnecessary.
 
-followed immediately by:
+Final line:
 
-> "Okay, that's actually pretty clever."
+> You're welcome.
+
+---
+
+# 23. Optional Developer Mode
+
+If a hidden developer/debug panel already exists, add:
+
+> **Engineering Status**
+>
+> Algorithms: 10
+>
+> Randomness: Yes
+>
+> Practical value: Under review
+>
+> Backend: None
+>
+> Database: None
+>
+> Reasonable design decision: No
+
+This should remain optional and should not clutter the normal UI.
+
+---
+
+# 24. Important Constraint
+
+Humor must NEVER break:
+
+- message input
+- send button
+- retry
+- simulation timing
+- algorithm correctness
+- probability calculations
+- experiment calculations
+- accessibility
+- reduced motion
+- responsive layout
+- audio controls
+- transmission telemetry
+- clipboard copy
+- settings persistence
+
+The joke is the product behavior.
+
+The implementation should still be serious.
+
+---
+
+# 25. Demo Moment
+
+The ideal live-demo sequence:
+
+1. Type:
+
+   > "Hello"
+
+2. Click Send.
+
+3. Watch the polished relay animate.
+
+4. Decoder mismatch.
+
+5. Show the corrupted message.
+
+6. Read:
+
+   > "The message has been interpreted incorrectly, with confidence."
+
+7. Click Retry.
+
+8. Eventually succeed.
+
+9. Show:
+
+   > "Against all odds."
+
+10. Open probability ring.
+
+11. Say:
+
+   > "It's only 20% because there are five systems."
+
+12. Run the 100-message experiment.
+
+13. Show the graph.
+
+14. End on:
+
+   > "This could have been a text field."
+
+That should be the comedic payoff.
+
+---
+
+# 26. Final Product Personality
+
+The finished Random Relay should feel like:
+
+**Apple-level presentation + university lab experiment + unnecessary networking architecture + deadpan comedy.**
+
+The user should initially think:
+
+> "Wow, this looks polished."
+
+Then:
+
+> "Wait… why didn't my message arrive?"
+
+Then:
+
+> "Oh."
+
+Then:
+
+> "This is stupid."
+
+Then:
+
+> "This is beautifully stupid."
+
+That is the goal.
+
+---
+
+# Definition of Done
+
+The iteration is complete when:
+
+- Existing functionality remains intact.
+- Relay remains the visual centerpiece.
+- Humor is integrated through microcopy and state commentary.
+- Success and failure remain immediately understandable.
+- Probability remains mathematically correct.
+- Experiment results remain mathematically correct.
+- Humor does not interfere with usability.
+- Humor does not dominate the UI.
+- Accessibility remains intact.
+- Mobile remains intact.
+- Reduced-motion remains intact.
+- Audio remains intact.
+- The app still looks premium.
+- The app becomes noticeably more memorable and entertaining.
+
+## Final principle
+
+**Do not make the UI look funny.**
+
+Make the UI look **extremely serious about doing something completely unnecessary.**
