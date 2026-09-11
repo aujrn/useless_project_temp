@@ -1,824 +1,631 @@
-# Design Specification
+# Random Relay UI Update: Central Transmission Relay
 
-## Project: Random Encoder / Decoder Messaging Simulator
+## Purpose
 
-## 1. Design Direction
+Make the **Central Transmission Relay** the visual centerpiece of Random Relay without making the interface larger, noisier, or dashboard-like.
 
-Create an interface inspired by Apple's design language:
+The relay should communicate the entire joke of the product at a glance:
 
-- Calm
-- Minimal
-- Content-first
-- High legibility
-- Generous spacing
-- Subtle depth
-- Purposeful motion
-- Native-feeling controls
-- Technical complexity hidden behind progressive disclosure
+> Message → Random Encoder → Payload travels → Random Decoder → Success or nonsense
 
-Do **not** imitate Apple's exact UI or copy proprietary layouts/assets.
-
-The goal is an Apple-inspired experience where the interface feels almost invisible and the communication simulation becomes the visual story.
+This is a **UI/visual hierarchy update**, not a change to the simulator's underlying logic.
 
 ---
 
-## 2. Design Personality
+## 1. Design Goal
 
-The product should feel like:
+The central relay should feel like the system's visual heart.
 
-**Messages on the surface. Machinery underneath.**
+The Sender and Receiver panels remain calm, readable, and functional. The Relay receives the strongest visual emphasis because it is where the project's core randomness happens.
 
-The normal state should look like a clean modern messaging app.
-
-When a message is sent, the interface briefly reveals the hidden journey:
+### Desired hierarchy
 
 ```text
-Plaintext
-   ↓
-Encoder
-   ↓
-Encoded Payload
-   ↓
-Transmission
-   ↓
-Decoder
-   ↓
-Result
+                SENDER
+                   │
+                   ▼
+            ┌─────────────┐
+            │   ENCODER   │
+            │      ↓      │
+            │   PAYLOAD   │
+            │      ↓      │
+            │   DECODER   │
+            └─────────────┘
+                   │
+                   ▼
+               RECEIVER
 ```
 
-This reveal should feel elegant rather than like a debugging console.
+Do not literally make this a large rectangular box. Use nodes, a transmission path, restrained borders, and subtle illumination.
 
 ---
 
-## 3. Visual Principles
+## 2. Preserve Existing Functionality
 
-### Hierarchy
+Do **not** remove or redesign the following existing behavior:
 
-Use three levels:
+- Sender and Receiver messaging panels
+- Random encoder selection
+- Random decoder selection
+- Correct-match decoding
+- Mismatch corruption
+- Encoder shuffle animation
+- Decoder shuffle animation
+- Traveling payload indicator
+- Scramble/glitch character resolution
+- Probability ring
+- Transmission telemetry
+- Payload copy button
+- System count 1–10
+- 3/5/10 presets
+- Animation speed controls
+- Reduced-motion behavior
+- Sound effects
+- Active Systems Browser
+- Settings sheet
+- `localStorage` preferences
 
-1. **Primary**
-   - Conversation
-   - Current message
-   - Send action
-
-2. **Secondary**
-   - Transmission status
-   - Success/failure state
-   - Selected encoder/decoder
-
-3. **Tertiary**
-   - Raw encoded payload
-   - IDs
-   - Probability
-   - Technical details
-
-Technical information should never compete with the actual messages.
-
-### Whitespace
-
-Use generous spacing.
-
-Avoid filling every available pixel.
-
-The interface should have enough breathing room that the transmission animation becomes noticeable.
+This change should primarily affect layout, hierarchy, spacing, node styling, and animation emphasis.
 
 ---
 
-## 4. Typography
-
-Use Apple's typography principles.
-
-Preferred font:
-
-```text
-SF Pro Display / SF Pro Text
-```
-
-When unavailable:
-
-```text
--apple-system
-BlinkMacSystemFont
-"Segoe UI"
-sans-serif
-```
-
-Suggested hierarchy:
-
-```text
-Large Title
-32–40 px
-Semibold
-
-Section Title
-20–24 px
-Semibold
-
-Message Text
-16–17 px
-Regular
-
-Secondary Text
-13–15 px
-Regular
-
-Technical Metadata
-12–13 px
-Medium
-```
-
-Avoid excessive font weights.
-
-Use weight and spacing before decorative effects.
-
----
-
-## 5. Color System
-
-The UI should work beautifully in both light and dark appearance.
-
-### Light
-
-```text
-Background
-#F5F5F7
-
-Primary Surface
-#FFFFFF
-
-Secondary Surface
-rgba(255,255,255,0.72)
-
-Primary Text
-#1D1D1F
-
-Secondary Text
-#6E6E73
-
-Separator
-rgba(0,0,0,0.08)
-```
-
-### Dark
-
-```text
-Background
-#000000
-
-Primary Surface
-#1C1C1E
-
-Secondary Surface
-#2C2C2E
-
-Primary Text
-#F5F5F7
-
-Secondary Text
-#98989D
-
-Separator
-rgba(255,255,255,0.12)
-```
-
-### Accent
-
-Use one restrained accent color for actions and system state.
-
-A cool blue is the default choice.
-
-Success and failure should not rely on color alone. Pair them with icons, labels, and motion.
-
----
-
-## 6. Materials
-
-Use subtle translucent surfaces where appropriate.
-
-Recommended:
-
-```text
-backdrop-filter: blur(...)
-background: translucent surface
-```
-
-Use glass/material effects sparingly.
-
-Do not turn the entire application into glass.
-
-The conversation remains the visual anchor.
-
----
-
-## 7. Main Layout
-
-Desktop/tablet:
-
-```text
-┌─────────────────────────────────────────────┐
-│                 Header                      │
-├───────────────────┬─────────────────────────┤
-│                   │                         │
-│     SENDER        │       RECEIVER          │
-│                   │                         │
-│  message history  │    message history      │
-│                   │                         │
-│                   │                         │
-│  [message input]  │                         │
-│             Send  │                         │
-└───────────────────┴─────────────────────────┘
-```
-
-The two panels should visually feel like two sides of the same conversation.
-
-Mobile:
-
-```text
-┌──────────────────────┐
-│ Header               │
-├──────────────────────┤
-│ Sender               │
-│                      │
-│ Message history      │
-│                      │
-├──────────────────────┤
-│ Transmission         │
-├──────────────────────┤
-│ Receiver             │
-│                      │
-│ Message history      │
-└──────────────────────┘
-```
-
-On mobile, sender and receiver become vertically stacked.
-
----
-
-## 8. Header
-
-Keep the header minimal.
-
-Possible structure:
-
-```text
-Random Relay
-
-● 3 encoder systems
-```
-
-or:
-
-```text
-Random Relay                         ⚙
-Messaging Simulation
-```
-
-Do not put a large logo or oversized branding above the conversation.
-
----
-
-## 9. Sender Panel
-
-### Header
-
-```text
-You
-Sender
-```
-
-Use a small avatar or abstract system icon.
-
-### Message Composer
-
-A rounded input surface:
-
-```text
-┌──────────────────────────────────┐
-│ Message...                    ↑  │
-└──────────────────────────────────┘
-```
-
-The send button should be circular and visually obvious.
-
-### Interaction
-
-When the user sends:
-
-1. Composer clears.
-2. Message appears in the Sender conversation.
-3. Transmission animation starts.
-4. Receiver result appears.
-
----
-
-## 10. Receiver Panel
-
-Header:
-
-```text
-Receiver
-Listening
-```
-
-Incoming messages should be visually distinct from sender messages.
-
-Successful decoding:
-
-```text
-┌──────────────────────────────┐
-│ Hello, how are you?          │
-└──────────────────────────────┘
-```
-
-Failed decoding:
-
-```text
-┌──────────────────────────────┐
-│ H3llø ░▒?9x                  │
-└──────────────────────────────┘
-
-Decode failed
-```
-
-The failure should feel intentional and readable as a system state.
-
----
-
-## 11. Transmission Card
-
-This is the signature component of the product.
-
-During transmission, show a compact floating card between the two chat areas.
-
-Example:
-
-```text
-Encoding message
-
-Encoder 03
-● ● ● ○ ○
-```
-
-Then:
-
-```text
-Transmitting
-
-KHOOR ZRUOG
-```
-
-Then:
-
-```text
-Decoder selected
-
-Decoder 01
-```
-
-Then:
-
-```text
-Decode failed
-```
-
-The card should transition between states instead of displaying every state simultaneously.
-
----
-
-## 12. Transmission Details
-
-After completion, provide an expandable disclosure control:
-
-```text
-⌄ Transmission details
-```
-
-Expanded:
-
-```text
-Encoder                         Encoder 03
-Encoded payload                KHOOR ZRUOG
-Decoder                         Decoder 01
-
-Compatibility                   No match
-
-Result                          Decode failed
-```
-
-For success:
-
-```text
-Compatibility                   Match
-Result                          Original message recovered
-```
-
-Use monospaced typography only for raw encoded payloads and technical values.
-
----
-
-## 13. Encoder / Decoder Visualization
-
-Avoid a literal engineering flowchart in the primary UI.
-
-Instead, use a lightweight animated relay:
-
-```text
-[Sender]  →  [Encoder 03]  →  [••••••]  →  [Decoder 01]  →  [Receiver]
-```
-
-Each node can briefly illuminate during its operation.
-
-The encoded payload can travel visually between the encoder and decoder.
-
----
-
-## 14. Randomness Visualization
-
-Random selection should feel intentional.
-
-When selecting an encoder:
-
-```text
-Choosing encoder
-Encoder 01
-Encoder 02
-Encoder 03 ✓
-Encoder 04
-```
-
-Do not create a slot-machine effect.
-
-A quick subtle shuffle followed by a settle is enough.
-
-Repeat for the decoder.
-
----
-
-## 15. Success State
-
-Success should be understated.
-
-Use:
-
-- Soft scale-in
-- Small checkmark
-- Original message appearing naturally
-- Short status text
-
-Example:
-
-```text
-✓ Message decoded
-
-"Meet me at 5."
-```
-
-Avoid confetti.
-
-The project is technical, not a birthday party.
-
----
-
-## 16. Failure State
-
-Failure should be visually interesting without becoming alarming.
-
-Use:
-
-- Brief text distortion
-- Slight glitch on the decoded payload
-- Small failure icon
-- Clear explanation
-
-Example:
-
-```text
-Decoder mismatch
-
-"Me3t m░ at 5?"
-```
-
-Then:
-
-```text
-The selected decoder could not recover
-the original message.
-```
-
-Keep the explanation secondary.
-
----
-
-## 17. Animation
-
-Motion should communicate state.
-
-Recommended principles:
-
-- 150–250 ms for small UI transitions
-- 250–450 ms for panel/card transitions
-- Ease-out for entering elements
-- Ease-in-out for state transitions
-- Avoid constant motion
-
-### Message Send
-
-```text
-Tap
- ↓
-Message lifts slightly
- ↓
-Moves into conversation
-```
-
-### Encoding
-
-Encoded characters can briefly morph or transition.
-
-### Transmission
-
-Use a small moving payload indicator.
-
-### Decoding
-
-Characters settle into the final result.
-
-For successful decoding, the gibberish/encoded representation should visually resolve into the original message.
-
-For failure, it should settle into corrupted text.
-
----
-
-## 18. Reduced Motion
-
-Respect:
-
-```text
-prefers-reduced-motion
-```
-
-When enabled:
-
-- Remove character morphing
-- Remove travelling payload animations
-- Use simple fades
-- Preserve all state information through text and icons
-
----
-
-## 19. Controls
-
-Use familiar rounded controls.
-
-Primary action:
-
-```text
-Send
-```
-
-Secondary controls:
-
-```text
-Details
-Configure
-Reset
-```
-
-Avoid excessive pill-shaped controls.
-
-Use segmented controls only where they genuinely represent mutually exclusive modes.
-
----
-
-## 20. Configuration Screen
-
-A lightweight settings sheet:
-
-```text
-Simulation
-
-Encoder / Decoder systems
-
-        −     5     +
-
-Selection
-● Random
-
-Behavior
-☑ Show transmission details
-☑ Animate encoding
-☑ Animate decoding
-```
-
-Optional presets:
-
-```text
-3 systems
-5 systems
-10 systems
-```
-
-The configuration should never overwhelm the messaging interface.
-
----
-
-## 21. Probability Display
-
-Show only when useful.
-
-Example:
-
-```text
-Random decoder success chance
-
-20%
-
-1 of 5 decoders matches
-```
-
-A simple circular indicator or horizontal progress representation is sufficient.
-
-Do not turn this into a financial dashboard.
-
----
-
-## 22. Empty State
-
-Centered composition:
-
-```text
-◉
-
-Send a message
-
-Your message will travel through a
-random encoder and decoder.
-
-See what comes out the other side.
-```
-
-Primary action remains the composer.
-
----
-
-## 23. Error States
-
-### Empty message
-
-```text
-Type a message first.
-```
-
-### Configuration error
-
-```text
-Choose at least one encoder system.
-```
-
-### Processing error
-
-```text
-Transmission interrupted.
-
-Try again.
-```
-
-Keep errors inline and contextual.
-
----
-
-## 24. Responsive Behavior
+## 3. Layout
 
 ### Desktop
 
-- Two-column conversation
-- Transmission card centered between panels
-- Comfortable maximum content width
-- Avoid full-width stretched chat bubbles
+Use a three-zone composition:
 
-### Tablet
+```text
+┌──────────────────┐      ┌────────────────────┐      ┌──────────────────┐
+│                  │      │                    │      │                  │
+│     SENDER       │ ───► │   CENTRAL RELAY   │ ───► │     RECEIVER      │
+│                  │      │                    │      │                  │
+└──────────────────┘      └────────────────────┘      └──────────────────┘
+```
 
-- Two-column layout when space allows
-- Reduce panel padding
+The relay should occupy the visual center of the page.
+
+Suggested desktop proportions:
+
+- Sender: approximately 30%
+- Relay: approximately 40%
+- Receiver: approximately 30%
+
+Do not force exact percentages if the existing layout requires different widths. The visual priority matters more than mathematical symmetry.
 
 ### Mobile
 
-- Single-column layout
-- Sender → Transmission → Receiver
-- Sticky composer if appropriate
-- Transmission details become a bottom sheet or expandable card
-
----
-
-## 25. Accessibility
-
-Required:
-
-- Keyboard navigation
-- Visible focus states
-- Semantic buttons
-- Proper labels for inputs
-- Sufficient text contrast
-- No information conveyed by color alone
-- Reduced-motion support
-- Screen-reader-friendly transmission states
-
-The encoded payload must remain selectable and readable.
-
----
-
-## 26. Component Inventory
-
-Recommended components:
+Stack the sections vertically:
 
 ```text
-AppShell
-Header
-ConversationPanel
-ChatMessage
-MessageComposer
-SendButton
-TransmissionCard
-TransmissionStep
-EncoderNode
-DecoderNode
-PayloadDisplay
-TransmissionDetails
-StatusBadge
-SystemSelector
-ProbabilityCard
-SettingsSheet
-EmptyState
-ErrorState
+Sender
+  ↓
+Central Relay
+  ↓
+Receiver
 ```
 
-Keep components composable and avoid one enormous application component.
+The relay should remain visually prominent but should not consume excessive vertical space.
 
 ---
 
-## 27. Design Tokens
+## 4. Central Relay Structure
 
-Centralize:
+Build the relay from four conceptual layers.
+
+### Layer 1: Encoder Node
+
+Display:
 
 ```text
---radius-small
---radius-medium
---radius-large
---spacing-xs
---spacing-sm
---spacing-md
---spacing-lg
---spacing-xl
---text-primary
---text-secondary
---surface-primary
---surface-secondary
---separator
---accent
+ENCODER
+System 03
+Caesar Shift
+✓
 ```
 
-Do not scatter visual constants throughout the application.
+During selection, retain the existing shuffle animation.
 
----
+The node should briefly show candidate systems before settling on the selected system.
 
-## 28. Overall Experience
+On settle:
 
-The experience should tell a story in three layers:
+- selected name becomes stable
+- subtle checkmark appears
+- node receives a short visual emphasis
+- no excessive bounce or glow
 
-### Layer 1: Chat
+### Layer 2: Transmission Path
 
-The user simply sends a message.
+Between encoder and decoder, create a clear but restrained transmission path.
 
-### Layer 2: Magic Window
+The path should communicate directionality.
 
-The interface reveals:
+Use:
+
+- thin line or track
+- subtle animated movement while transmitting
+- traveling payload particle
+- small visual activation when the payload enters the path
+
+The existing payload particle should remain the primary motion element.
+
+### Layer 3: Payload
+
+The payload should be visually associated with the transmission path rather than appearing as an unrelated floating element.
+
+Example:
 
 ```text
-Encoder → Payload → Decoder
+ENCODER
+   │
+   │
+   ●  payload
+   │
+   │
+   ↓
+DECODER
 ```
 
-### Layer 3: Explanation
+The payload may briefly display a shortened raw representation if space allows, but avoid creating horizontal overflow with long encoded strings.
 
-The user can inspect exactly why the receiver got the original message or gibberish.
+The full raw payload remains available in Transmission Details.
 
-The default experience should stay simple.
+### Layer 4: Decoder Node
 
-The complexity should appear only when the user asks to see it.
+Display:
+
+```text
+DECODER
+System 07
+Binary Stream
+✓
+```
+
+Retain the existing decoder shuffle animation.
+
+After selection, clearly indicate whether the decoder matches the encoder.
 
 ---
 
-## 29. Final Design Test
+## 5. Visual Emphasis
 
-Ask:
+The relay should be more visually noticeable than Sender and Receiver, but not dramatically brighter.
 
-> Could someone understand the app in five seconds?
+Use hierarchy through:
 
-Then:
+- slightly stronger surface separation
+- subtle elevation
+- stronger internal spacing
+- clearer node boundaries
+- restrained accent illumination during active transmission
+- animation
 
-> Could someone understand what happened to their message in thirty seconds?
+Avoid:
 
-Then:
+- huge glowing borders
+- neon effects
+- excessive gradients
+- constant animation
+- large decorative illustrations
+- gamer-style HUD elements
 
-> Could someone inspect the technical mechanism without opening developer tools?
+The aesthetic should remain clean, precise, and Apple-inspired.
 
-If all three answers are yes, the design is doing its job.
+---
+
+## 6. Idle State
+
+When no transmission is occurring, the relay should be quiet.
+
+Show:
+
+```text
+        CENTRAL RELAY
+
+        Encoder
+           │
+           │
+        Payload
+           │
+           │
+        Decoder
+```
+
+Use low-contrast inactive states.
+
+The relay should feel ready rather than busy.
+
+Do not continuously animate the payload or transmission line while idle.
+
+---
+
+## 7. Sending State
+
+When the user presses Send:
+
+### Sequence
+
+1. Sender send interaction occurs.
+2. Relay activates.
+3. Encoder node begins subtle shuffle.
+4. Encoder settles on selected system.
+5. Payload is generated.
+6. Payload particle launches onto the transmission path.
+7. Payload travels toward decoder.
+8. Decoder begins shuffle near the payload's arrival.
+9. Decoder settles.
+10. Match/mismatch is determined.
+11. Receiver result resolves through the existing scramble effect.
+
+The relay should visually make this sequence understandable without requiring the user to read telemetry.
+
+---
+
+## 8. Transmission Animation
+
+The traveling payload is the primary "wow" moment.
+
+Recommended behavior:
+
+```text
+Encoder
+   │
+   ●───────────────►
+   │                 Payload
+   │
+Decoder
+```
+
+The particle should:
+
+- begin near the encoder
+- travel smoothly along the relay path
+- accelerate slightly at launch
+- decelerate naturally near the decoder
+- disappear or resolve into the decoder state
+
+Avoid excessive particle trails.
+
+A subtle glow or opacity shift is enough.
+
+---
+
+## 9. Match State
+
+When encoder and decoder match:
+
+- transmission path briefly activates
+- decoder node settles with a positive state
+- payload transitions cleanly into decoded result
+- receiver scramble resolves into the original message
+- success state is visually clear
+
+Example:
+
+```text
+ENCODER
+Caesar Shift
+   │
+   ●────────────►
+                 │
+                 ▼
+              DECODER
+             Caesar Shift
+                  ✓
+```
+
+The success state should feel satisfying but restrained.
+
+---
+
+## 10. Mismatch State
+
+When encoder and decoder differ:
+
+- transmission still completes normally
+- decoder node indicates mismatch
+- relay briefly enters a failure state
+- receiver scramble resolves into corrupted text
+- existing failure explanation/telemetry remains available
+
+Example:
+
+```text
+ENCODER
+Atbash
+   │
+   ●────────────►
+                 │
+                 ▼
+              DECODER
+             Binary Stream
+                  ✕
+```
+
+Do not make failure visually aggressive. The joke should come from the result, not from a giant warning.
+
+---
+
+## 11. Relationship to Sender and Receiver
+
+Sender and Receiver should frame the relay rather than compete with it.
+
+### Sender
+
+Keep focused on:
+
+- message composition
+- send action
+- sent-message state
+
+### Relay
+
+Focus on:
+
+- encoder selection
+- payload movement
+- decoder selection
+- match/mismatch
+
+### Receiver
+
+Focus on:
+
+- received result
+- successful decoded message
+- corrupted result
+- retry action when applicable
+
+This creates a natural visual narrative from left to right.
+
+---
+
+## 12. Typography
+
+Keep the existing typography system.
+
+Use hierarchy rather than adding new fonts or decorative text.
+
+Suggested relay hierarchy:
+
+- Section label: small uppercase / secondary
+- Node role: medium emphasis
+- Algorithm name: primary emphasis
+- System ID: secondary metadata
+- Payload: monospaced
+- State: concise status
+
+Do not use oversized headings inside the relay.
+
+---
+
+## 13. Color and State
+
+Follow the existing design system and accent color.
+
+The relay should not introduce a new color palette.
+
+Use the existing accent for:
+
+- active transmission
+- payload particle
+- selected node
+- success confirmation
+
+Use neutral secondary states for:
+
+- idle
+- waiting
+- shuffle candidates
+
+Use the existing failure styling for mismatch.
+
+Color must not be the only indicator. Pair state changes with icons, text, or symbols.
+
+---
+
+## 14. Responsive Behavior
+
+### Desktop
+
+Keep Sender, Relay, and Receiver horizontally aligned.
+
+### Tablet
+
+Reduce horizontal spacing while maintaining the central relay's visual prominence.
+
+### Mobile
+
+Stack vertically:
+
+```text
+┌──────────────┐
+│    SENDER    │
+└──────────────┘
+       ↓
+┌──────────────┐
+│ CENTRAL RELAY│
+│              │
+│   ENCODER    │
+│      ●       │
+│   DECODER    │
+└──────────────┘
+       ↓
+┌──────────────┐
+│   RECEIVER   │
+└──────────────┘
+```
+
+The payload animation should remain understandable vertically.
+
+Long payloads must never cause horizontal page overflow.
+
+---
+
+## 15. Reduced Motion
+
+When reduced motion is enabled:
+
+- remove or shorten payload travel
+- replace animated movement with state transitions
+- keep encoder/decoder selection understandable without rapid shuffling
+- retain success/failure feedback
+- do not remove important state information
+
+The UI must remain fully functional without animation.
+
+---
+
+## 16. Accessibility
+
+Verify:
+
+- Relay nodes have meaningful accessible labels.
+- Encoder and decoder changes are announced through the existing status mechanism.
+- Match/mismatch is available as text, not only color.
+- Keyboard navigation remains logical.
+- Focus is not trapped or lost during transmission.
+- Payload details remain accessible to screen readers.
+- Reduced-motion preferences are respected.
+
+Avoid using animation as the only way to understand what happened.
+
+---
+
+## 17. Do Not Change
+
+This iteration is specifically a **visual hierarchy/UI refinement**.
+
+Do not add:
+
+- authentication
+- backend services
+- database
+- real networking
+- accounts
+- contacts
+- cloud persistence
+- additional encryption systems
+- additional algorithms
+
+Do not rewrite the simulation architecture merely to support the UI change.
+
+Do not turn the interface into a dashboard.
+
+---
+
+## 18. Implementation Guidance
+
+Prefer modifying the existing relay markup and CSS rather than creating a second relay component.
+
+Reuse existing:
+
+- encoder selection state
+- decoder selection state
+- payload animation
+- simulation timeline
+- audio events
+- success/failure state
+- reduced-motion setting
+
+If the existing DOM structure prevents the desired visual hierarchy, make the smallest structural change necessary.
+
+Keep the implementation zero-dependency.
+
+Preserve the existing root/develop synchronization workflow.
+
+---
+
+## 19. Demo Target
+
+The finished UI should make this sequence visually obvious within a few seconds:
+
+```text
+User types:
+"Are you coming to the hackathon?"
+
+        ↓
+
+ENCODER
+Caesar Shift
+
+        ↓
+
+● PAYLOAD travels through relay
+
+        ↓
+
+DECODER
+Binary Stream
+
+        ↓
+
+✕ MISMATCH
+
+        ↓
+
+Receiver:
+corrupted nonsense
+```
+
+On a successful attempt:
+
+```text
+ENCODER
+Caesar Shift
+
+        ↓
+
+● PAYLOAD
+
+        ↓
+
+DECODER
+Caesar Shift ✓
+
+        ↓
+
+Receiver:
+Are you coming to the hackathon?
+```
+
+The audience should understand the product's core mechanic **without the presenter explaining every UI element**.
+
+---
+
+## 20. Acceptance Criteria
+
+The UI update is complete when:
+
+- [ ] Central Relay is visually centered and clearly the primary interaction area.
+- [ ] Sender and Receiver remain readable and uncluttered.
+- [ ] Existing encoder shuffle works inside the new relay hierarchy.
+- [ ] Existing decoder shuffle works inside the new relay hierarchy.
+- [ ] Traveling payload remains visually connected to the transmission path.
+- [ ] Successful transmission clearly communicates a match.
+- [ ] Failed transmission clearly communicates a mismatch.
+- [ ] Receiver scramble/resolve animation still works.
+- [ ] Transmission Details still works.
+- [ ] Payload copy still works.
+- [ ] Settings still work.
+- [ ] Audio behavior is unchanged.
+- [ ] Reduced motion is respected.
+- [ ] Desktop layout has Sender | Relay | Receiver hierarchy.
+- [ ] Mobile layout has Sender ↓ Relay ↓ Receiver hierarchy.
+- [ ] No horizontal overflow occurs with long payloads or messages.
+- [ ] No new dependencies are introduced.
+- [ ] No existing simulator behavior is broken.
+- [ ] The relay looks calm while idle and becomes visually active only during transmission.
+
+---
+
+## Final Principle
+
+**Make the relay the story.**
+
+The interface should not merely contain a relay between two chat boxes. The relay should make the entire concept visible:
+
+> A perfectly functional messaging system that goes through an unnecessarily unreliable middleman.
+
+Keep it elegant. Keep it restrained. Let the payload's journey be the moment people remember.
