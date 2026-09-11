@@ -169,8 +169,13 @@ input, textarea, select {
 
 .brand-section {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--spacing-sm);
+}
+
+.brand-title-group {
+  display: flex;
+  flex-direction: column;
 }
 
 .brand-title {
@@ -178,6 +183,13 @@ input, textarea, select {
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.brand-tagline {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-style: italic;
 }
 
 .brand-badge {
@@ -785,6 +797,46 @@ input, textarea, select {
   border-color: var(--separator-strong);
 }
 
+/* Section 22 of agent.md: Expandable 'Why does this exist?' Panel */
+.why-panel {
+  margin-top: 10px;
+  border-top: 1px dashed var(--separator);
+  padding-top: 6px;
+}
+
+.why-panel summary {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast);
+}
+
+.why-panel summary:hover {
+  color: var(--accent);
+}
+
+.why-panel-content {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-top: 6px;
+  background: var(--surface-tertiary);
+  padding: 8px 12px;
+  border-radius: var(--radius-small);
+  border: 1px solid var(--separator);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.why-panel-footer {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
 /* ==========================================================================
    Central Transmission Relay — Visual Centerpiece (design.md Section 1 & 4)
    ========================================================================== */
@@ -817,12 +869,39 @@ input, textarea, select {
   align-items: center;
 }
 
+.relay-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
 .card-label {
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-tertiary);
+}
+
+.relay-subtext {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Absurd Telemetry Row (Section 21 of agent.md) */
+.absurd-telemetry-row {
+  display: flex;
+  gap: 6px;
+}
+
+.telemetry-pill {
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  background: var(--surface-tertiary);
+  color: var(--text-tertiary);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--separator);
 }
 
 .relay-status-pill {

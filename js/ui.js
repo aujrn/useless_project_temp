@@ -331,8 +331,9 @@ export class SimulatorUI {
   updateSystemDisplays() {
     const prob = this.simulator.getProbabilityFormatted();
     const active = this.simulator.getActiveSystems();
+    const probSubtext = this.simulator.getProbabilitySubtext();
 
-    this.probText.textContent = `${prob.percent} match`;
+    this.probText.textContent = probSubtext;
     this.activeSystemsCount.textContent = `${this.simulator.systemCount} systems`;
 
     // Circular SVG Progress Ring
@@ -363,13 +364,13 @@ export class SimulatorUI {
     if (this.statActualRate) this.statActualRate.textContent = stats.actualRate;
     if (this.statExpectedRate) this.statExpectedRate.textContent = stats.expectedRate;
 
-    // Uselessness Score (Section 13)
+    // Uselessness Score (Section 13 & 14)
     const score = stats.uselessnessScore || 72;
     if (this.uselessnessScoreVal) this.uselessnessScoreVal.textContent = `${score}%`;
     if (this.uselessnessFill) this.uselessnessFill.style.width = `${score}%`;
 
     if (this.uselessnessCaption) {
-      let caption = `${score}% useless. Excellent.`;
+      let caption = `${score}% useless. Excellent work. Almost completely unnecessary.`;
       if (score > 90) caption = `${score}% useless. Masterpiece of inefficiency.`;
       else if (score < 40) caption = `${score}% useless. Suspiciously functional.`;
       this.uselessnessCaption.textContent = caption;
@@ -405,7 +406,10 @@ export class SimulatorUI {
     card.className = 'message-card sender-card';
     card.id = `sender_${msg.id}`;
 
-    const attemptTag = msg.attemptNumber > 1 ? `<span class="attempt-badge">Attempt #${msg.attemptNumber}</span>` : '';
+    const subtextNote = this.simulator.getAttemptSubtext(msg.attemptNumber);
+    const attemptTag = msg.attemptNumber > 1
+      ? `<span class="attempt-badge">Attempt #${msg.attemptNumber}${subtextNote ? ' · ' + subtextNote : ''}</span>`
+      : '';
 
     card.innerHTML = `
       <div class="message-bubble">${this.escapeHTML(msg.originalMessage)}</div>
@@ -434,18 +438,21 @@ export class SimulatorUI {
       ? `<span class="attempt-badge celebrate">Decoded on attempt #${msg.attemptNumber}</span>`
       : '';
 
-    const failureExplanation = !isSuccess
-      ? `<div class="failure-explanation">The receiver didn't have the right decoder (${this.escapeHTML(msg.decoder.name)} vs ${this.escapeHTML(msg.encoder.name)}).</div>`
-      : '';
+    const receiverSubtext = isSuccess ? this.simulator.getSuccessSubtext() : this.simulator.getFailureSubtext();
 
-    // Retry "Try Again" Button (Section 8 of agent.md)
+    const failureExplanation = !isSuccess
+      ? `<div class="failure-explanation">${receiverSubtext} (Decoder ${this.escapeHTML(msg.decoder.name)} vs ${this.escapeHTML(msg.encoder.name)}).</div>`
+      : `<div class="success-explanation" style="font-size: 0.76rem; color: var(--text-secondary); font-style: italic; margin-top: 4px;">${receiverSubtext}</div>`;
+
+    // Dynamic Retry Button Copy (Section 10 of updated agent.md)
+    const retryLabel = this.simulator.getRetryButtonLabel(msg.attemptNumber);
     const retryBtnHtml = !isSuccess
       ? `<button type="button" class="retry-btn" data-retry="${this.escapeHTML(msg.originalMessage)}">
            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
              <polyline points="1 4 1 10 7 10"/>
              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
            </svg>
-           <span>Try Again</span>
+           <span>${retryLabel}</span>
          </button>`
       : '';
 
@@ -608,6 +615,8 @@ export class SimulatorUI {
       n.classList.remove('active', 'active-success', 'active-failed');
     });
 
+    const relaySubtextEl = document.getElementById('relaySubtext');
+
     switch (phase) {
       case 'started':
         this.nodeSender.classList.add('active');
@@ -617,18 +626,21 @@ export class SimulatorUI {
         this.nodeEncoderDesc.textContent = 'Random draw';
         this.nodeDecoderName.textContent = 'Waiting for payload';
         this.nodeDecoderDesc.textContent = 'Decoder idle';
+        if (relaySubtextEl) relaySubtextEl.textContent = 'Nothing has gone wrong yet.';
         if (this.travelingPayload) this.travelingPayload.classList.remove('traveling');
         break;
 
       case 'selecting_encoder':
         this.nodeEncoder.classList.add('active');
         this.nodeEncoderDesc.textContent = 'Shuffling candidate systems...';
+        if (relaySubtextEl) relaySubtextEl.textContent = 'There are several perfectly good options. We will pick one at random.';
         break;
 
       case 'encoder_selected':
         this.nodeEncoder.classList.add('active');
         this.nodeEncoderName.textContent = `${encoder.name} ✓`;
         this.nodeEncoderDesc.textContent = `Selected: System #${encoder.id}`;
+        if (relaySubtextEl) relaySubtextEl.textContent = 'Making the message unnecessarily complicated.';
         break;
 
       case 'encoded':
@@ -640,6 +652,7 @@ export class SimulatorUI {
       case 'transmitting':
         this.nodeEncoder.classList.add('active');
         this.payloadStreamBox.classList.add('has-data');
+        if (relaySubtextEl) relaySubtextEl.textContent = 'It is traveling approximately nowhere.';
         if (this.travelingPayload) {
           this.travelingPayload.classList.add('traveling');
         }
@@ -649,6 +662,7 @@ export class SimulatorUI {
       case 'selecting_decoder':
         this.nodeDecoder.classList.add('active');
         this.nodeDecoderDesc.textContent = 'Shuffling candidate decoders...';
+        if (relaySubtextEl) relaySubtextEl.textContent = 'Hopefully the correct one.';
         break;
 
       case 'decoder_selected':
@@ -665,17 +679,18 @@ export class SimulatorUI {
       case 'completed':
         this.nodeReceiver.classList.add(matched ? 'active-success' : 'active-failed');
         this.relayStatusPill.textContent = matched ? 'Transmission Complete · Match' : 'Transmission Complete · Mismatch';
+        if (relaySubtextEl) relaySubtextEl.textContent = matched ? 'Against all odds.' : 'The message has been interpreted incorrectly, with confidence.';
         break;
     }
   }
 
   /**
-   * 100-Message Automated Experiment UI (Section 12 of agent.md)
+   * 100-Message Automated Experiment UI (Section 12 & 13 of agent.md)
    */
   async startExperiment() {
     this.openModal(this.experimentModal);
     this.expProgressFill.style.width = '0%';
-    this.expProgressText.textContent = 'Running 100 simulations...';
+    this.expProgressText.textContent = 'Running 100 simulations... This is scientifically unnecessary.';
     this.expResultsBox.style.display = 'none';
 
     // Mute sound during bulk experiment
@@ -684,7 +699,13 @@ export class SimulatorUI {
     const result = await this.simulator.run100MessageExperiment((progress) => {
       const pct = progress.iteration;
       this.expProgressFill.style.width = `${pct}%`;
-      this.expProgressText.textContent = `Simulating: ${progress.iteration} / 100 (${progress.successful} matched, ${progress.failed} failed)`;
+
+      let milestoneCopy = `Simulating: ${progress.iteration} / 100 (${progress.successful} matched, ${progress.failed} failed)`;
+      if (pct === 25) milestoneCopy = '25 / 100 · Quarter complete. We have learned very little.';
+      else if (pct === 50) milestoneCopy = '50 / 100 · Halfway there. The spreadsheet would like this.';
+      else if (pct === 75) milestoneCopy = '75 / 100 · 75% complete. Surely this information will be useful.';
+
+      this.expProgressText.textContent = milestoneCopy;
     });
 
     this.audio.setExperimentMute(false);
@@ -698,7 +719,18 @@ export class SimulatorUI {
 
       this.expDiffBadge.textContent = result.difference;
       this.expDiffBadge.className = `exp-diff-tag ${result.difference.startsWith('+') ? 'diff-positive' : 'diff-negative'}`;
-      this.expProgressText.textContent = 'Experiment complete!';
+
+      // Deadpan result commentary (Section 13 of agent.md)
+      const actualNum = result.successful;
+      const expectedNum = Math.round(this.simulator.getProbability() * 100);
+      const diff = Math.abs(actualNum - expectedNum);
+
+      let deadpanSummary = 'Close enough for a system that should not exist.';
+      if (this.simulator.systemCount === 1) deadpanSummary = '100% · Congratulations. You invented normal messaging.';
+      else if (diff <= 2) deadpanSummary = 'Remarkably consistent.';
+      else if (diff >= 10) deadpanSummary = 'Probability appears to have developed opinions.';
+
+      this.expProgressText.textContent = `Experiment complete. ${deadpanSummary}`;
 
       this.renderExperimentChart(result);
     }

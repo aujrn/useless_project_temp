@@ -13,7 +13,10 @@
     <!-- Header -->
     <header class="app-header">
       <div class="brand-section">
-        <h1 class="brand-title">Random Relay</h1>
+        <div class="brand-title-group">
+          <h1 class="brand-title">Random Relay</h1>
+          <span class="brand-tagline">Reliable messaging, redesigned by probability.</span>
+        </div>
         <span class="brand-badge">Simulation</span>
       </div>
 
@@ -92,7 +95,7 @@
         </div>
 
         <div class="messages-stream" id="senderStream">
-          <!-- Empty State -->
+          <!-- Empty State (Section 16 of agent.md) -->
           <div class="empty-state" id="senderEmpty">
             <div class="empty-state-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -100,9 +103,9 @@
                 <polygon points="22 2 15 22 11 13 2 9 22 2"/>
               </svg>
             </div>
-            <h3 class="empty-state-title">Send a message</h3>
+            <h3 class="empty-state-title">Nothing to transmit</h3>
             <p class="empty-state-desc">
-              Your message will travel through an unnecessarily unreliable random encoder and decoder middleman.
+              Type something. We have already built the infrastructure.
             </p>
           </div>
         </div>
@@ -133,6 +136,17 @@
             <button type="button" class="chip-btn" data-sample="Meet me at 5">Meet me at 5</button>
             <button type="button" class="chip-btn" data-sample="Secret code: 4096">Secret code</button>
           </div>
+
+          <!-- Section 22 of agent.md: Expandable 'Why does this exist?' Panel -->
+          <details class="why-panel">
+            <summary><span>Why does this exist?</span></summary>
+            <div class="why-panel-content">
+              <p>Because someone asked for a useless project.</p>
+              <p>So we built a messaging system where the sender and receiver independently choose incompatible ways to understand the same message.</p>
+              <p>The result is technically valid, statistically predictable, and completely unnecessary.</p>
+              <p class="why-panel-footer">You're welcome.</p>
+            </div>
+          </details>
         </div>
       </section>
 
@@ -140,8 +154,18 @@
       <section class="transmission-column" aria-label="Central Transmission Relay">
         <div class="transmission-card">
           <div class="card-title-bar">
-            <span class="card-label">Central Transmission Relay</span>
+            <div class="relay-title-group">
+              <span class="card-label">Central Transmission Relay</span>
+              <span class="relay-subtext" id="relaySubtext">Nothing has gone wrong yet.</span>
+            </div>
             <span class="relay-status-pill" id="relayStatusPill">Idle</span>
+          </div>
+
+          <!-- Absurd Telemetry Pills (Section 21 of agent.md) -->
+          <div class="absurd-telemetry-row">
+            <span class="telemetry-pill">Complexity: High</span>
+            <span class="telemetry-pill">Necessity: Low</span>
+            <span class="telemetry-pill">Reason: Unknown</span>
           </div>
 
           <!-- Timeline progress bar -->
@@ -263,16 +287,16 @@
         </div>
 
         <div class="messages-stream" id="receiverStream">
-          <!-- Empty State -->
+          <!-- Empty State (Section 16 of agent.md) -->
           <div class="empty-state" id="receiverEmpty">
             <div class="empty-state-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
               </svg>
             </div>
-            <h3 class="empty-state-title">Listening</h3>
+            <h3 class="empty-state-title">Waiting for a message</h3>
             <p class="empty-state-desc">
-              Decoded outputs will appear here. If the decoder matches, original plaintext is restored. Otherwise, deterministic gibberish arrives.
+              It may arrive correctly. This is not guaranteed.
             </p>
           </div>
         </div>

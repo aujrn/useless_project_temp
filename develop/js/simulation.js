@@ -141,6 +141,56 @@ export class MessagingSimulator {
   }
 
   /**
+   * Humor Microcopy Generators (Section 4-15 of updated agent.md)
+   */
+  getProbabilitySubtext() {
+    const p = this.getProbabilityFormatted();
+    if (this.systemCount === 1) return `${p.percent} match · We have discovered a functioning messaging system.`;
+    if (this.systemCount === 2) return `${p.percent} match · Coin-flipping, but with infrastructure.`;
+    if (this.systemCount === 3) return `${p.percent} match · This is already getting irresponsible.`;
+    if (this.systemCount === 5) return `${p.percent} match · Bold strategy.`;
+    if (this.systemCount === 10) return `${p.percent} match · Excellent architecture. Terrible odds.`;
+    return `${p.percent} match · We strongly recommend lowering your expectations.`;
+  }
+
+  getRetryButtonLabel(attemptNumber) {
+    if (attemptNumber <= 3) return 'Try again';
+    if (attemptNumber <= 5) return 'One more time';
+    if (attemptNumber <= 9) return 'Surely now';
+    return 'This is fine';
+  }
+
+  getAttemptSubtext(attemptNumber) {
+    if (attemptNumber === 4) return 'We remain optimistic.';
+    if (attemptNumber === 6) return 'This is becoming a lifestyle.';
+    if (attemptNumber >= 11) return 'Statistically, we have learned nothing.';
+    return '';
+  }
+
+  getSuccessSubtext() {
+    const variants = [
+      'The systems agree.',
+      'Against all odds.',
+      'A rare moment of competence.',
+      'The decoder knew what it was doing.',
+      'Probability has briefly been kind.'
+    ];
+    return variants[Math.floor(Math.random() * variants.length)];
+  }
+
+  getFailureSubtext() {
+    const variants = [
+      'The decoder and encoder disagreed.',
+      'Technically, something arrived.',
+      'The payload survived. Its meaning did not.',
+      'A message was received. It was not your message.',
+      'The system has produced modern art.',
+      'Please do not attempt to interpret this.'
+    ];
+    return variants[Math.floor(Math.random() * variants.length)];
+  }
+
+  /**
    * Core Send / Retry Transmission (Sections 2, 4, 8, 9)
    */
   async sendMessage(plaintext, isRetry = false) {
@@ -332,14 +382,18 @@ export class MessagingSimulator {
       await this._delay(200);
       this.history.push(messageRecord);
 
-      // Check Easter Eggs (Section 14)
+      // Check Easter Eggs / Achievements (Section 15 of updated agent.md)
       let easterEgg = null;
-      if (this.stats.consecutiveFailures === 10) {
-        easterEgg = "Are you sure you want to keep doing this? (10 failures in a row)";
-      } else if (this.stats.consecutiveSuccesses === 10) {
-        easterEgg = "Suspiciously competent. (10 successful decodes in a row)";
+      if (this.stats.successful === 1 && isMatch) {
+        easterEgg = "It Worked · You successfully sent a message. This was not guaranteed.";
+      } else if (this.currentAttempt === 5) {
+        easterEgg = "Persistence · You could have copied and pasted the message.";
+      } else if (this.currentAttempt === 10) {
+        easterEgg = "Commitment · At this point, the project has won.";
       } else if (this.stats.total === 100) {
-        easterEgg = "100 transmissions completed. You could have just texted them.";
+        easterEgg = "Researcher · You have generated statistically meaningful evidence for something nobody asked for.";
+      } else if (this.systemCount === 1 && this.stats.total === 1) {
+        easterEgg = "Efficiency · You removed the entire point of Random Relay.";
       }
 
       this.emit('phaseChange', {
