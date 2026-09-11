@@ -1,6 +1,7 @@
 /**
  * Core Encoder / Decoder Algorithms
  * 10 Paired Reversible Systems & Deterministic Corruption Logic
+ * Fully Unicode-safe (supporting Emojis 😀🚀, Malayalam മലയാളം, symbols, newlines, tabs)
  */
 
 export const ALGORITHM_PAIRS = [
@@ -10,7 +11,7 @@ export const ALGORITHM_PAIRS = [
     name: 'Caesar Shift (+3)',
     encoderName: 'Encoder 01 · Caesar (+3)',
     decoderName: 'Decoder 01 · Caesar (-3)',
-    description: 'Rotates each alphabetical character forward by 3 positions.',
+    description: 'Rotates alphabetical characters forward by 3 positions, preserving Unicode & symbols.',
     encode: (text) => {
       return text.replace(/[a-zA-Z]/g, (char) => {
         const code = char.charCodeAt(0);
@@ -32,7 +33,7 @@ export const ALGORITHM_PAIRS = [
     name: 'Atbash Substitution',
     encoderName: 'Encoder 02 · Atbash Cipher',
     decoderName: 'Decoder 02 · Atbash Inverse',
-    description: 'Replaces each letter with its symmetric opposite in the alphabet (A ↔ Z, B ↔ Y).',
+    description: 'Replaces letters with their symmetric alphabet opposite (A ↔ Z, B ↔ Y).',
     encode: (text) => {
       return text.replace(/[a-zA-Z]/g, (char) => {
         const code = char.charCodeAt(0);
@@ -60,22 +61,19 @@ export const ALGORITHM_PAIRS = [
     name: 'Reverse + Invert Case',
     encoderName: 'Encoder 03 · Reverse & Invert',
     decoderName: 'Decoder 03 · Revert & Restore',
-    description: 'Reverses character order and toggles uppercase to lowercase and vice versa.',
+    description: 'Reverses grapheme/character order and toggles letter casing, emoji-safe.',
     encode: (text) => {
-      const toggled = text
-        .split('')
-        .map((c) => {
-          if (c >= 'a' && c <= 'z') return c.toUpperCase();
-          if (c >= 'A' && c <= 'Z') return c.toLowerCase();
-          return c;
-        })
-        .join('');
-      return toggled.split('').reverse().join('');
+      const chars = Array.from(text);
+      const toggled = chars.map((c) => {
+        if (c >= 'a' && c <= 'z') return c.toUpperCase();
+        if (c >= 'A' && c <= 'Z') return c.toLowerCase();
+        return c;
+      });
+      return toggled.reverse().join('');
     },
     decode: (payload) => {
-      const reversed = payload.split('').reverse().join('');
-      return reversed
-        .split('')
+      const chars = Array.from(payload).reverse();
+      return chars
         .map((c) => {
           if (c >= 'a' && c <= 'z') return c.toUpperCase();
           if (c >= 'A' && c <= 'Z') return c.toLowerCase();
@@ -90,26 +88,26 @@ export const ALGORITHM_PAIRS = [
     name: 'XOR Mask (0x5A)',
     encoderName: 'Encoder 04 · XOR 0x5A Hex',
     decoderName: 'Decoder 04 · XOR 0x5A Revert',
-    description: 'Applies bitwise XOR with 0x5A key and formats as hyphenated hex bytes.',
+    description: 'Applies bitwise XOR 0x5A over UTF-8 byte stream and formats as hyphenated hex.',
     encode: (text) => {
-      const bytes = [];
-      for (let i = 0; i < text.length; i++) {
-        const code = text.charCodeAt(i);
-        const masked = (code ^ 0x5a) & 0xff;
-        bytes.push(masked.toString(16).padStart(2, '0').toUpperCase());
+      const bytes = new TextEncoder().encode(text);
+      const hexArr = [];
+      for (let i = 0; i < bytes.length; i++) {
+        const masked = (bytes[i] ^ 0x5a) & 0xff;
+        hexArr.push(masked.toString(16).padStart(2, '0').toUpperCase());
       }
-      return bytes.join('-');
+      return hexArr.join('-');
     },
     decode: (payload) => {
       try {
         const parts = payload.split('-');
-        let out = '';
-        for (const part of parts) {
-          const byte = parseInt(part, 16);
-          if (isNaN(byte)) return null;
-          out += String.fromCharCode((byte ^ 0x5a) & 0xff);
+        const bytes = new Uint8Array(parts.length);
+        for (let i = 0; i < parts.length; i++) {
+          const b = parseInt(parts[i], 16);
+          if (isNaN(b)) return null;
+          bytes[i] = (b ^ 0x5a) & 0xff;
         }
-        return out;
+        return new TextDecoder().decode(bytes);
       } catch {
         return null;
       }
@@ -118,28 +116,26 @@ export const ALGORITHM_PAIRS = [
   {
     id: 5,
     key: 'base64',
-    name: 'Base64 Tokenizer',
+    name: 'Base64 Representation',
     encoderName: 'Encoder 05 · Base64 Wrapper',
     decoderName: 'Decoder 05 · Base64 Unwrapper',
     description: 'Encodes Unicode text into standard Base64 representation (clearly labeled as encoding, not encryption).',
     encode: (text) => {
-      try {
-        return btoa(encodeURIComponent(text).replace(/%([0-9A-F]{2})/g, (match, p1) => {
-          return String.fromCharCode(parseInt('0x' + p1, 16));
-        }));
-      } catch {
-        return btoa(text);
+      const bytes = new TextEncoder().encode(text);
+      let binStr = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binStr += String.fromCharCode(bytes[i]);
       }
+      return btoa(binStr);
     },
     decode: (payload) => {
       try {
-        const decoded = atob(payload);
-        return decodeURIComponent(
-          decoded
-            .split('')
-            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-            .join('')
-        );
+        const binStr = atob(payload);
+        const bytes = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) {
+          bytes[i] = binStr.charCodeAt(i);
+        }
+        return new TextDecoder().decode(bytes);
       } catch {
         return null;
       }
@@ -181,22 +177,24 @@ export const ALGORITHM_PAIRS = [
     name: '8-bit Binary Stream',
     encoderName: 'Encoder 07 · Binary Stream (8-bit)',
     decoderName: 'Decoder 07 · Binary to Text',
-    description: 'Converts each character into an 8-bit binary representation separated by spaces.',
+    description: 'Converts UTF-8 bytes into 8-bit binary strings separated by spaces.',
     encode: (text) => {
-      return text
-        .split('')
-        .map((c) => c.charCodeAt(0).toString(2).padStart(8, '0'))
-        .join(' ');
+      const bytes = new TextEncoder().encode(text);
+      const binArr = [];
+      for (let i = 0; i < bytes.length; i++) {
+        binArr.push(bytes[i].toString(2).padStart(8, '0'));
+      }
+      return binArr.join(' ');
     },
     decode: (payload) => {
       try {
         const chunks = payload.trim().split(/\s+/);
-        let out = '';
-        for (const chunk of chunks) {
-          if (!/^[01]{1,16}$/.test(chunk)) return null;
-          out += String.fromCharCode(parseInt(chunk, 2));
+        const bytes = new Uint8Array(chunks.length);
+        for (let i = 0; i < chunks.length; i++) {
+          if (!/^[01]{8}$/.test(chunks[i])) return null;
+          bytes[i] = parseInt(chunks[i], 2);
         }
-        return out;
+        return new TextDecoder().decode(bytes);
       } catch {
         return null;
       }
@@ -208,14 +206,15 @@ export const ALGORITHM_PAIRS = [
     name: 'Rail Fence (3 Rails)',
     encoderName: 'Encoder 08 · Rail Fence Zig-Zag',
     decoderName: 'Decoder 08 · Rail Fence Reconstruct',
-    description: 'Transposition cipher writing characters in a 3-rail zig-zag pattern.',
+    description: 'Transposition cipher placing characters in a 3-rail zig-zag pattern, emoji-safe.',
     encode: (text) => {
-      if (text.length <= 3) return text;
+      const chars = Array.from(text);
+      if (chars.length <= 3) return text;
       const rails = [[], [], []];
       let rail = 0;
       let direction = 1;
-      for (let i = 0; i < text.length; i++) {
-        rails[rail].push(text[i]);
+      for (let i = 0; i < chars.length; i++) {
+        rails[rail].push(chars[i]);
         rail += direction;
         if (rail === 2) direction = -1;
         else if (rail === 0) direction = 1;
@@ -223,11 +222,12 @@ export const ALGORITHM_PAIRS = [
       return rails[0].join('') + rails[1].join('') + rails[2].join('');
     },
     decode: (payload) => {
-      if (payload.length <= 3) return payload;
+      const chars = Array.from(payload);
+      if (chars.length <= 3) return payload;
       const railLengths = [0, 0, 0];
       let rail = 0;
       let direction = 1;
-      for (let i = 0; i < payload.length; i++) {
+      for (let i = 0; i < chars.length; i++) {
         railLengths[rail]++;
         rail += direction;
         if (rail === 2) direction = -1;
@@ -235,15 +235,15 @@ export const ALGORITHM_PAIRS = [
       }
 
       const rails = [
-        payload.slice(0, railLengths[0]).split(''),
-        payload.slice(railLengths[0], railLengths[0] + railLengths[1]).split(''),
-        payload.slice(railLengths[0] + railLengths[1]).split('')
+        chars.slice(0, railLengths[0]),
+        chars.slice(railLengths[0], railLengths[0] + railLengths[1]),
+        chars.slice(railLengths[0] + railLengths[1])
       ];
 
       let out = '';
       rail = 0;
       direction = 1;
-      for (let i = 0; i < payload.length; i++) {
+      for (let i = 0; i < chars.length; i++) {
         out += rails[rail].shift();
         rail += direction;
         if (rail === 2) direction = -1;
@@ -258,11 +258,12 @@ export const ALGORITHM_PAIRS = [
     name: 'Hexadecimal Stream',
     encoderName: 'Encoder 09 · Hex Byte Stream',
     decoderName: 'Decoder 09 · Hex Byte Converter',
-    description: 'Converts UTF-8 characters into contiguous uppercase hexadecimal byte representation.',
+    description: 'Converts UTF-8 byte stream into contiguous uppercase hexadecimal bytes.',
     encode: (text) => {
+      const bytes = new TextEncoder().encode(text);
       let hex = '';
-      for (let i = 0; i < text.length; i++) {
-        hex += text.charCodeAt(i).toString(16).padStart(2, '0').toUpperCase();
+      for (let i = 0; i < bytes.length; i++) {
+        hex += bytes[i].toString(16).padStart(2, '0').toUpperCase();
       }
       return '0x' + hex;
     },
@@ -270,13 +271,13 @@ export const ALGORITHM_PAIRS = [
       try {
         let clean = payload.startsWith('0x') ? payload.slice(2) : payload;
         if (clean.length % 2 !== 0) return null;
-        let out = '';
+        const bytes = new Uint8Array(clean.length / 2);
         for (let i = 0; i < clean.length; i += 2) {
-          const code = parseInt(clean.substr(i, 2), 16);
-          if (isNaN(code)) return null;
-          out += String.fromCharCode(code);
+          const byteVal = parseInt(clean.substr(i, 2), 16);
+          if (isNaN(byteVal)) return null;
+          bytes[i / 2] = byteVal;
         }
-        return out;
+        return new TextDecoder().decode(bytes);
       } catch {
         return null;
       }
@@ -288,7 +289,7 @@ export const ALGORITHM_PAIRS = [
     name: 'Symbol Token Substitution',
     encoderName: 'Encoder 10 · Symbol Token Matrix',
     decoderName: 'Decoder 10 · Symbol Matrix Reversal',
-    description: 'Bijective mapping exchanging vowels and select common consonants with phonetic symbols.',
+    description: 'Bijective mapping exchanging vowels and select consonants with phonetic symbols.',
     encode: (text) => {
       const map = {
         'a': 'α', 'A': 'Δ',
@@ -301,8 +302,7 @@ export const ALGORITHM_PAIRS = [
         'r': 'ρ', 'R': '®',
         'n': 'η', 'N': 'Π'
       };
-      return text
-        .split('')
+      return Array.from(text)
         .map((c) => map[c] || c)
         .join('');
     },
@@ -318,8 +318,7 @@ export const ALGORITHM_PAIRS = [
         'ρ': 'r', '®': 'R',
         'η': 'n', 'Π': 'N'
       };
-      return payload
-        .split('')
+      return Array.from(payload)
         .map((c) => reverseMap[c] || c)
         .join('');
     }
@@ -330,10 +329,11 @@ export const ALGORITHM_PAIRS = [
  * Generate deliberate, plausible corrupted gibberish output when an incompatible
  * decoder attempts to process an encoded payload.
  *
- * Implements requirement from Section 8 of agent.md:
- * "The app should not pretend that the decoder successfully decoded the message.
- *  Instead, produce visibly corrupted/gibberish output. Examples: H3llo ░▒?9x
- *  or another deterministic corruption derived from the encoded payload."
+ * Requirements (Section 7 of agent.md):
+ * - Deterministic for given transmission state.
+ * - Plausible visual gibberish/glitch output.
+ * - Must not accidentally equal the original plaintext.
+ * - Must preserve application stability for Unicode, emoji, long messages.
  */
 export function generateCorruptedOutput(payload, encoder, decoder) {
   let attemptedDecode = null;
@@ -346,8 +346,9 @@ export function generateCorruptedOutput(payload, encoder, decoder) {
   const glitchGlyphs = ['░', '▒', '▓', '?', '¿', '§', '¶', '×', 'ø', '¥', '9x', '#!'];
 
   let seed = (encoder.id * 73 + decoder.id * 31) % 10007;
-  for (let i = 0; i < Math.min(payload.length, 30); i++) {
-    seed = (seed * 33 + payload.charCodeAt(i)) % 10007;
+  const safeChars = Array.from(payload);
+  for (let i = 0; i < Math.min(safeChars.length, 30); i++) {
+    seed = (seed * 33 + safeChars[i].codePointAt(0)) % 10007;
   }
 
   const seededRandom = () => {
@@ -357,11 +358,12 @@ export function generateCorruptedOutput(payload, encoder, decoder) {
 
   let base = attemptedDecode && attemptedDecode.length >= 3 ? attemptedDecode : payload;
 
-  if (base.length > 36) {
-    base = base.slice(0, 32) + '...';
+  const baseChars = Array.from(base);
+  if (baseChars.length > 36) {
+    base = baseChars.slice(0, 32).join('') + '...';
   }
 
-  const chars = base.split('');
+  const chars = Array.from(base);
   const corrupted = [];
 
   for (let i = 0; i < chars.length; i++) {

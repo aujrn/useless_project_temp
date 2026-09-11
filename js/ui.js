@@ -1,15 +1,19 @@
 /**
  * UI Renderer and View Controller
  * Handles DOM updates, Apple-style animations, progressive disclosure,
- * central relay node illumination, character scramble resolution,
- * Web Audio synthesized feedback, and settings sheet.
+ * Central Relay node illumination, character scramble resolution,
+ * simulation modes, retry/attempt counter, stats, and 100-message experiment.
+ * Conforming to updated private/agent.md and private/design.md.
  */
+
+import { AudioEngine } from './audio.js';
 
 export class SimulatorUI {
   constructor(simulator) {
     this.simulator = simulator;
+    this.audio = new AudioEngine();
 
-    // Cache DOM Elements
+    // DOM Elements - Panels & Streams
     this.senderStream = document.getElementById('senderStream');
     this.receiverStream = document.getElementById('receiverStream');
     this.senderEmpty = document.getElementById('senderEmpty');
@@ -19,7 +23,7 @@ export class SimulatorUI {
     this.messageInput = document.getElementById('messageInput');
     this.sendButton = document.getElementById('sendBtn');
 
-    // Central Relay Components
+    // Central Relay Components (Visual Centerpiece)
     this.relayStatusPill = document.getElementById('relayStatusPill');
     this.timelineFill = document.getElementById('timelineFill');
     this.payloadStreamBox = document.getElementById('payloadStreamBox');
@@ -35,14 +39,38 @@ export class SimulatorUI {
     this.nodeDecoderName = document.getElementById('nodeDecoderName');
     this.nodeDecoderDesc = document.getElementById('nodeDecoderDesc');
 
-    // Header & Stats Elements
+    // Header, Probability, & Stats Elements
     this.probBadge = document.getElementById('probBadge');
     this.probText = document.getElementById('probText');
     this.probRingCircle = document.getElementById('probRingCircle');
     this.activeSystemsCount = document.getElementById('activeSystemsCount');
-    this.statProbBig = document.getElementById('statProbBig');
-    this.statProbSub = document.getElementById('statProbSub');
+
+    this.statTotalNum = document.getElementById('statTotalNum');
+    this.statSuccNum = document.getElementById('statSuccNum');
+    this.statFailNum = document.getElementById('statFailNum');
+    this.statActualRate = document.getElementById('statActualRate');
+    this.statExpectedRate = document.getElementById('statExpectedRate');
+
+    this.uselessnessScoreVal = document.getElementById('uselessnessScoreVal');
+    this.uselessnessFill = document.getElementById('uselessnessFill');
+    this.uselessnessCaption = document.getElementById('uselessnessCaption');
     this.systemsChipsList = document.getElementById('systemsChipsList');
+
+    // Mode Selector Controls
+    this.modeButtons = document.querySelectorAll('.mode-btn');
+
+    // Experiment Trigger & Modal
+    this.experimentTriggerBtn = document.getElementById('experimentTriggerBtn');
+    this.experimentModal = document.getElementById('experimentModal');
+    this.closeExperimentBtn = document.getElementById('closeExperimentBtn');
+    this.expProgressFill = document.getElementById('expProgressFill');
+    this.expProgressText = document.getElementById('expProgressText');
+    this.expResultsBox = document.getElementById('expResultsBox');
+    this.expSuccVal = document.getElementById('expSuccVal');
+    this.expFailVal = document.getElementById('expFailVal');
+    this.expActualVal = document.getElementById('expActualVal');
+    this.expExpectedVal = document.getElementById('expExpectedVal');
+    this.expDiffBadge = document.getElementById('expDiffBadge');
 
     // Settings Modal
     this.settingsModal = document.getElementById('settingsModal');
@@ -65,10 +93,6 @@ export class SimulatorUI {
 
     this.toastNotice = document.getElementById('toastNotice');
 
-    // Web Audio Synthesizer
-    this.audioCtx = null;
-    this.soundEnabled = localStorage.getItem('sound_enabled') !== 'false';
-
     this.init();
   }
 
@@ -79,148 +103,57 @@ export class SimulatorUI {
     this.initAudioState();
     this.updateSystemDisplays();
     this.renderActiveSystemsList();
+    this.updateStatsDisplay(this.simulator.getStats());
   }
 
-  /**
-   * Sound synthesizer using Web Audio API (Zero external assets)
-   */
-  getAudioContext() {
-    if (!this.audioCtx && typeof window.AudioContext !== 'undefined') {
-      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      this.audioCtx = new AudioCtxClass();
-    }
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
-    }
-    return this.audioCtx;
-  }
-
-  playSendSound() {
-    if (!this.soundEnabled) return;
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(640, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.06);
-
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.06);
-    } catch {
-      // Audio autoplay policy fallback
-    }
-  }
-
-  playTransitSound() {
-    if (!this.soundEnabled) return;
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(420, ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(560, ctx.currentTime + 0.08);
-
-      gain.gain.setValueAtTime(0.03, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.08);
-    } catch {}
-  }
-
-  playSuccessSound() {
-    if (!this.soundEnabled) return;
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-      // Gentle dual-tone bell / chime
-      const now = ctx.currentTime;
-      [587.33, 880].forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now + i * 0.08);
-
-        gain.gain.setValueAtTime(0.06, now + i * 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now + i * 0.08);
-        osc.stop(now + i * 0.08 + 0.35);
-      });
-    } catch {}
-  }
-
-  playFailureSound() {
-    if (!this.soundEnabled) return;
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(190, now);
-      osc.frequency.exponentialRampToValueAtTime(110, now + 0.18);
-
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.18);
-    } catch {}
-  }
-
-  /**
-   * Bind event listeners from simulator engine
-   */
   bindSimulatorEvents() {
     this.simulator.on('messageSent', ({ message }) => {
       this.hideEmptyStates();
       this.appendSenderMessage(message);
       this.sendButton.disabled = true;
       this.messageInput.disabled = true;
-      this.playSendSound();
+      this.audio.playSendSound();
     });
 
     this.simulator.on('phaseChange', (data) => {
       this.renderTransmissionPhase(data);
     });
 
-    this.simulator.on('messageReceived', ({ message }) => {
+    this.simulator.on('messageReceived', ({ message, stats, easterEgg }) => {
       this.appendReceiverMessage(message);
       this.sendButton.disabled = false;
       this.messageInput.disabled = false;
       this.messageInput.focus();
 
       if (message.matched) {
-        this.playSuccessSound();
+        this.audio.playSuccessSound();
       } else {
-        this.playFailureSound();
+        this.audio.playFailureSound();
+      }
+
+      if (stats) {
+        this.updateStatsDisplay(stats);
+      }
+
+      if (easterEgg) {
+        this.showToast(easterEgg, 4000);
       }
     });
 
-    this.simulator.on('configChange', () => {
+    this.simulator.on('configChange', ({ stats }) => {
       this.updateSystemDisplays();
       this.renderActiveSystemsList();
+      if (stats) this.updateStatsDisplay(stats);
+    });
+
+    this.simulator.on('modeChange', ({ mode }) => {
+      this.updateModeUI(mode);
+      this.updateSystemDisplays();
     });
 
     this.simulator.on('historyCleared', () => {
       this.resetChatUI();
+      this.updateStatsDisplay(this.simulator.getStats());
     });
 
     this.simulator.on('error', ({ message }) => {
@@ -231,10 +164,8 @@ export class SimulatorUI {
     });
   }
 
-  /**
-   * Bind DOM user interactions
-   */
   bindUserEvents() {
+    // Send form
     this.composerForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const text = this.messageInput.value;
@@ -243,7 +174,7 @@ export class SimulatorUI {
         this.showToast('Type a message first.');
         return;
       }
-      this.simulator.sendMessage(text);
+      this.simulator.sendMessage(text, false);
       this.messageInput.value = '';
     });
 
@@ -256,20 +187,42 @@ export class SimulatorUI {
       });
     });
 
-    // Settings Modal
-    this.openSettingsBtn.addEventListener('click', () => this.openModal());
-    this.closeSettingsBtn.addEventListener('click', () => this.closeModal());
-    this.settingsModal.addEventListener('click', (e) => {
-      if (e.target === this.settingsModal) this.closeModal();
+    // Mode Selector Segmented Buttons (Header)
+    this.modeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const selectedMode = btn.getAttribute('data-mode');
+        this.simulator.setMode(selectedMode);
+      });
     });
 
+    // Settings Modal
+    this.openSettingsBtn.addEventListener('click', () => this.openModal(this.settingsModal));
+    this.closeSettingsBtn.addEventListener('click', () => this.closeModal(this.settingsModal));
+    this.settingsModal.addEventListener('click', (e) => {
+      if (e.target === this.settingsModal) this.closeModal(this.settingsModal);
+    });
+
+    // Experiment Trigger & Modal
+    if (this.experimentTriggerBtn) {
+      this.experimentTriggerBtn.addEventListener('click', () => this.startExperiment());
+    }
+    if (this.closeExperimentBtn) {
+      this.closeExperimentBtn.addEventListener('click', () => this.closeModal(this.experimentModal));
+    }
+    if (this.experimentModal) {
+      this.experimentModal.addEventListener('click', (e) => {
+        if (e.target === this.experimentModal) this.closeModal(this.experimentModal);
+      });
+    }
+
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.settingsModal.classList.contains('open')) {
-        this.closeModal();
+      if (e.key === 'Escape') {
+        if (this.settingsModal.classList.contains('open')) this.closeModal(this.settingsModal);
+        if (this.experimentModal && this.experimentModal.classList.contains('open')) this.closeModal(this.experimentModal);
       }
     });
 
-    // Stepper
+    // Systems Stepper
     this.stepperMinus.addEventListener('click', () => {
       const current = this.simulator.systemCount;
       if (current > 1) {
@@ -315,7 +268,7 @@ export class SimulatorUI {
     }
 
     if (this.chkSound) {
-      this.chkSound.checked = this.soundEnabled;
+      this.chkSound.checked = this.audio.soundEnabled;
       this.chkSound.addEventListener('change', (e) => {
         this.setSoundEnabled(e.target.checked);
       });
@@ -323,15 +276,15 @@ export class SimulatorUI {
 
     if (this.soundToggleHeaderBtn) {
       this.soundToggleHeaderBtn.addEventListener('click', () => {
-        this.setSoundEnabled(!this.soundEnabled);
+        this.setSoundEnabled(!this.audio.soundEnabled);
       });
     }
 
-    // Clear history
+    // Reset Conversation
     this.clearHistoryBtn.addEventListener('click', () => {
-      this.simulator.clearHistory();
-      this.closeModal();
-      this.showToast('Conversation cleared');
+      this.simulator.resetConversation();
+      this.closeModal(this.settingsModal);
+      this.showToast('Conversation & session statistics reset');
     });
 
     // Theme toggle
@@ -339,8 +292,7 @@ export class SimulatorUI {
   }
 
   setSoundEnabled(val) {
-    this.soundEnabled = val;
-    localStorage.setItem('sound_enabled', val ? 'true' : 'false');
+    this.audio.setEnabled(val);
     if (this.chkSound) this.chkSound.checked = val;
     this.updateSoundIcon();
     this.showToast(val ? 'Sound effects enabled' : 'Sound effects muted');
@@ -348,18 +300,24 @@ export class SimulatorUI {
 
   initAudioState() {
     this.updateSoundIcon();
-    if (this.chkSound) this.chkSound.checked = this.soundEnabled;
+    if (this.chkSound) this.chkSound.checked = this.audio.soundEnabled;
   }
 
   updateSoundIcon() {
     if (!this.soundHeaderIcon) return;
-    if (this.soundEnabled) {
+    if (this.audio.soundEnabled) {
       this.soundHeaderIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
       this.soundToggleHeaderBtn.title = 'Mute Sounds';
     } else {
       this.soundHeaderIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
       this.soundToggleHeaderBtn.title = 'Enable Sounds';
     }
+  }
+
+  updateModeUI(mode) {
+    this.modeButtons.forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+    });
   }
 
   setSystems(count) {
@@ -370,9 +328,6 @@ export class SimulatorUI {
     });
   }
 
-  /**
-   * Update header, cards, and chips according to active systems & probability
-   */
   updateSystemDisplays() {
     const prob = this.simulator.getProbabilityFormatted();
     const active = this.simulator.getActiveSystems();
@@ -380,20 +335,13 @@ export class SimulatorUI {
     this.probText.textContent = `${prob.percent} match`;
     this.activeSystemsCount.textContent = `${this.simulator.systemCount} systems`;
 
-    // Update SVG progress ring
+    // Circular SVG Progress Ring
     if (this.probRingCircle) {
       const radius = 9;
       const circumference = 2 * Math.PI * radius;
       const offset = circumference * (1 - prob.value);
       this.probRingCircle.style.strokeDasharray = `${circumference}`;
       this.probRingCircle.style.strokeDashoffset = `${offset}`;
-    }
-
-    if (this.statProbBig) {
-      this.statProbBig.textContent = prob.percent;
-    }
-    if (this.statProbSub) {
-      this.statProbSub.textContent = `${prob.ratio} decoders compatible`;
     }
 
     if (this.stepperVal) {
@@ -404,6 +352,27 @@ export class SimulatorUI {
       this.systemsChipsList.innerHTML = active
         .map((s) => `<span class="system-tag" title="${this.escapeHTML(s.description)}">${s.name}</span>`)
         .join('');
+    }
+  }
+
+  updateStatsDisplay(stats) {
+    if (!stats) return;
+    if (this.statTotalNum) this.statTotalNum.textContent = stats.total;
+    if (this.statSuccNum) this.statSuccNum.textContent = stats.successful;
+    if (this.statFailNum) this.statFailNum.textContent = stats.failed;
+    if (this.statActualRate) this.statActualRate.textContent = stats.actualRate;
+    if (this.statExpectedRate) this.statExpectedRate.textContent = stats.expectedRate;
+
+    // Uselessness Score (Section 13)
+    const score = stats.uselessnessScore || 72;
+    if (this.uselessnessScoreVal) this.uselessnessScoreVal.textContent = `${score}%`;
+    if (this.uselessnessFill) this.uselessnessFill.style.width = `${score}%`;
+
+    if (this.uselessnessCaption) {
+      let caption = `${score}% useless. Excellent.`;
+      if (score > 90) caption = `${score}% useless. Masterpiece of inefficiency.`;
+      else if (score < 40) caption = `${score}% useless. Suspiciously functional.`;
+      this.uselessnessCaption.textContent = caption;
     }
   }
 
@@ -430,19 +399,19 @@ export class SimulatorUI {
     if (this.receiverEmpty) this.receiverEmpty.style.display = 'none';
   }
 
-  /**
-   * Render Sender message bubble
-   */
   appendSenderMessage(msg) {
     const timeStr = this.formatTime(msg.timestamp);
     const card = document.createElement('div');
     card.className = 'message-card sender-card';
     card.id = `sender_${msg.id}`;
 
+    const attemptTag = msg.attemptNumber > 1 ? `<span class="attempt-badge">Attempt #${msg.attemptNumber}</span>` : '';
+
     card.innerHTML = `
       <div class="message-bubble">${this.escapeHTML(msg.originalMessage)}</div>
       <div class="message-meta">
-        <span>Sent</span> · <span>${timeStr}</span>
+        ${attemptTag}
+        <span>Sent · ${timeStr}</span>
       </div>
     `;
 
@@ -450,9 +419,6 @@ export class SimulatorUI {
     this.senderStream.scrollTop = this.senderStream.scrollHeight;
   }
 
-  /**
-   * Render Receiver message bubble with scramble resolution animation & details
-   */
   appendReceiverMessage(msg) {
     const timeStr = this.formatTime(msg.timestamp);
     const isSuccess = msg.matched;
@@ -462,7 +428,26 @@ export class SimulatorUI {
 
     const statusTag = isSuccess
       ? `<span class="status-tag tag-success">✓ Decoded</span>`
-      : `<span class="status-tag tag-failure">✗ Decode Failed</span>`;
+      : `<span class="status-tag tag-failure">✕ Decode Failed</span>`;
+
+    const celebrationBadge = (isSuccess && msg.attemptNumber > 1)
+      ? `<span class="attempt-badge celebrate">Decoded on attempt #${msg.attemptNumber}</span>`
+      : '';
+
+    const failureExplanation = !isSuccess
+      ? `<div class="failure-explanation">The receiver didn't have the right decoder (${this.escapeHTML(msg.decoder.name)} vs ${this.escapeHTML(msg.encoder.name)}).</div>`
+      : '';
+
+    // Retry "Try Again" Button (Section 8 of agent.md)
+    const retryBtnHtml = !isSuccess
+      ? `<button type="button" class="retry-btn" data-retry="${this.escapeHTML(msg.originalMessage)}">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+             <polyline points="1 4 1 10 7 10"/>
+             <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+           </svg>
+           <span>Try Again</span>
+         </button>`
+      : '';
 
     const summaryLabel = isSuccess
       ? '✓ Transmission details (Match)'
@@ -474,8 +459,11 @@ export class SimulatorUI {
       <div class="message-bubble message-content" id="content_${msg.id}"></div>
       <div class="message-meta">
         ${statusTag}
+        ${celebrationBadge}
         <span>${timeStr}</span>
       </div>
+      ${failureExplanation}
+      ${retryBtnHtml}
 
       <details class="transmission-details" ${autoOpen}>
         <summary><span>${summaryLabel}</span></summary>
@@ -512,6 +500,10 @@ export class SimulatorUI {
               ${isSuccess ? 'Decode successful' : 'Decode failed'}
             </span>
           </div>
+          <div class="details-row">
+            <span class="details-label">ATTEMPT</span>
+            <span class="details-val">#${msg.attemptNumber}</span>
+          </div>
         </div>
       </details>
     `;
@@ -519,7 +511,16 @@ export class SimulatorUI {
     this.receiverStream.appendChild(card);
     this.receiverStream.scrollTop = this.receiverStream.scrollHeight;
 
-    // Attach copy button handler
+    // Retry Button Click
+    const retryBtn = card.querySelector('.retry-btn');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => {
+        const textToRetry = retryBtn.getAttribute('data-retry');
+        this.simulator.sendMessage(textToRetry, true);
+      });
+    }
+
+    // Copy Payload Click
     const copyBtn = card.querySelector('.copy-payload-btn');
     if (copyBtn) {
       copyBtn.addEventListener('click', (e) => {
@@ -535,7 +536,7 @@ export class SimulatorUI {
       });
     }
 
-    // Run character-by-character resolving animation
+    // Scramble Text Resolving Effect
     const contentEl = card.querySelector(`#content_${msg.id}`);
     if (this.simulator.animateResolve && this.simulator.speed !== 'instant') {
       this.animateTextResolve(contentEl, msg.decodedMessage);
@@ -544,10 +545,6 @@ export class SimulatorUI {
     }
   }
 
-  /**
-   * Scramble / Matrix Resolve Text Effect
-   * Glitches characters and settles them into the final text
-   */
   animateTextResolve(element, targetText) {
     const glyphs = '░▒▓01!?#*&%^$@abcdefghijklmnopqrstuvwxyz';
     const totalFrames = 12;
@@ -576,46 +573,15 @@ export class SimulatorUI {
     }, 28);
   }
 
-  /**
-   * Subtle candidate shuffle animation
-   */
-  shuffleCandidateNames(targetElement, candidates, finalName, onComplete) {
-    if (!candidates || candidates.length <= 1) {
-      targetElement.textContent = finalName;
-      if (onComplete) onComplete();
-      return;
-    }
-
-    let iterations = 0;
-    const maxIterations = 4;
-    const interval = setInterval(() => {
-      iterations++;
-      const randCand = candidates[Math.floor(Math.random() * candidates.length)];
-      targetElement.textContent = randCand;
-
-      if (iterations >= maxIterations) {
-        clearInterval(interval);
-        targetElement.textContent = `${finalName} ✓`;
-        if (onComplete) onComplete();
-      }
-    }, 40);
-  }
-
-  /**
-   * Update the Central Transmission Relay nodes and status
-   */
   renderTransmissionPhase(data) {
-    const { phase, step, label, payload, encoder, decoder, matched, candidates } = data;
+    const { phase, step, label, payload, encoder, decoder, matched } = data;
 
-    // Update status text
     this.relayStatusPill.textContent = label;
     this.relayStatusPill.classList.toggle('active', phase !== 'completed');
 
-    // Progress bar fill (0 to 100%)
     const pct = Math.min(100, Math.round((step / 7) * 100));
     this.timelineFill.style.width = `${pct}%`;
 
-    // Reset node active classes
     const nodes = [this.nodeSender, this.nodeEncoder, this.nodeDecoder, this.nodeReceiver];
     nodes.forEach((n) => {
       n.classList.remove('active', 'active-success', 'active-failed');
@@ -635,13 +601,13 @@ export class SimulatorUI {
 
       case 'selecting_encoder':
         this.nodeEncoder.classList.add('active');
-        this.nodeEncoderDesc.textContent = 'Shuffling available encoders...';
+        this.nodeEncoderDesc.textContent = 'Shuffling candidate systems...';
         break;
 
       case 'encoder_selected':
         this.nodeEncoder.classList.add('active');
         this.nodeEncoderName.textContent = `${encoder.name} ✓`;
-        this.nodeEncoderDesc.textContent = `Selected: Pair #${encoder.id}`;
+        this.nodeEncoderDesc.textContent = `Selected: System #${encoder.id}`;
         break;
 
       case 'encoded':
@@ -656,18 +622,18 @@ export class SimulatorUI {
         if (this.travelingPayload) {
           this.travelingPayload.classList.add('traveling');
         }
-        this.playTransitSound();
+        this.audio.playTransitSound();
         break;
 
       case 'selecting_decoder':
         this.nodeDecoder.classList.add('active');
-        this.nodeDecoderDesc.textContent = 'Shuffling available decoders...';
+        this.nodeDecoderDesc.textContent = 'Shuffling candidate decoders...';
         break;
 
       case 'decoder_selected':
         this.nodeDecoder.classList.add('active');
-        this.nodeDecoderName.textContent = `${decoder.name} ✓`;
-        this.nodeDecoderDesc.textContent = `Selected: Pair #${decoder.id}`;
+        this.nodeDecoderName.textContent = `${decoder.name} ${matched ? '✓' : '✕'}`;
+        this.nodeDecoderDesc.textContent = `Selected: System #${decoder.id}`;
         if (this.travelingPayload) this.travelingPayload.classList.remove('traveling');
         break;
 
@@ -677,8 +643,41 @@ export class SimulatorUI {
 
       case 'completed':
         this.nodeReceiver.classList.add(matched ? 'active-success' : 'active-failed');
-        this.relayStatusPill.textContent = matched ? 'Transmission Complete (Match)' : 'Transmission Complete (Mismatch)';
+        this.relayStatusPill.textContent = matched ? 'Transmission Complete · Match' : 'Transmission Complete · Mismatch';
         break;
+    }
+  }
+
+  /**
+   * 100-Message Automated Experiment UI (Section 12 of agent.md)
+   */
+  async startExperiment() {
+    this.openModal(this.experimentModal);
+    this.expProgressFill.style.width = '0%';
+    this.expProgressText.textContent = 'Running 100 simulations...';
+    this.expResultsBox.style.display = 'none';
+
+    // Mute sound during bulk experiment
+    this.audio.setExperimentMute(true);
+
+    const result = await this.simulator.run100MessageExperiment((progress) => {
+      const pct = progress.iteration;
+      this.expProgressFill.style.width = `${pct}%`;
+      this.expProgressText.textContent = `Simulating: ${progress.iteration} / 100 (${progress.successful} matched, ${progress.failed} failed)`;
+    });
+
+    this.audio.setExperimentMute(false);
+
+    if (result) {
+      this.expResultsBox.style.display = 'flex';
+      this.expSuccVal.textContent = result.successful;
+      this.expFailVal.textContent = result.failed;
+      this.expActualVal.textContent = result.actualRate;
+      this.expExpectedVal.textContent = result.expectedRate;
+
+      this.expDiffBadge.textContent = result.difference;
+      this.expDiffBadge.className = `exp-diff-tag ${result.difference.startsWith('+') ? 'diff-positive' : 'diff-negative'}`;
+      this.expProgressText.textContent = 'Experiment complete!';
     }
   }
 
@@ -714,27 +713,28 @@ export class SimulatorUI {
     }, 400);
   }
 
-  showToast(text) {
+  showToast(text, duration = 2400) {
     if (!this.toastNotice) return;
     this.toastNotice.textContent = text;
     this.toastNotice.classList.add('show');
     clearTimeout(this._toastTimer);
     this._toastTimer = setTimeout(() => {
       this.toastNotice.classList.remove('show');
-    }, 2400);
+    }, duration);
   }
 
-  openModal() {
-    this.settingsModal.classList.add('open');
-    this.settingsModal.setAttribute('aria-hidden', 'false');
+  openModal(modalEl) {
+    if (!modalEl) return;
+    modalEl.classList.add('open');
+    modalEl.setAttribute('aria-hidden', 'false');
   }
 
-  closeModal() {
-    this.settingsModal.classList.remove('open');
-    this.settingsModal.setAttribute('aria-hidden', 'true');
+  closeModal(modalEl) {
+    if (!modalEl) return;
+    modalEl.classList.remove('open');
+    modalEl.setAttribute('aria-hidden', 'true');
   }
 
-  /* Theme Management */
   initTheme() {
     const saved = localStorage.getItem('theme');
     if (saved) {
@@ -756,7 +756,7 @@ export class SimulatorUI {
     document.documentElement.setAttribute('data-theme', theme);
     if (this.themeIcon) {
       this.themeIcon.innerHTML = theme === 'dark'
-        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="23" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
         : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
     }
   }
