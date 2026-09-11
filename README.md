@@ -48,12 +48,28 @@ The central joke is **not** that the software is broken. The central joke is tha
 - **Session Telemetry & Statistics:** Tracks total transmissions, success/failed counts, actual vs expected match rate, and a dynamic Uselessness Rating ($15\%\text{--}99\%$).
 - **100-Message Automated Experiment:** Runs 100 rapid simulated transmissions and plots a live SVG cumulative success rate line chart against the theoretical expected probability reference line.
 - **Progressive Transmission Details:** Expandable details showing Raw Payload, 1-click Payload Copying, Attempt Counter, and a step-by-step event timeline (`✓ Created` → `✓ Encoded` → `✓ Transmitted` → `✓ Decoded`).
-- **Web Audio API Synthesizer:** Zero-dependency sound effects (soft key press, transit flutter, crystal success chime, soft mismatch tone).
+- **Web Audio API Synthesizer:** Zero-dependency sound effects (soft key press, transit flutter, crystal success chime, comedic "faah" failure tone).
 - **Apple-Inspired Design Tokens:** Dark/light mode toggle, SF Pro typography, frosted glass `backdrop-filter`, and full `prefers-reduced-motion` compliance.
 
 ---
 
-## 4. Technical Stack & Local Execution
+## 4. Screenshots & Application Gallery
+
+### Live Transmission & Telemetry (Dark Mode)
+![Live Transmission & Telemetry](pictures/Screenshot%202026-09-12%20044905.png)
+
+### Light Mode Interface & Central Relay
+![Light Mode Interface](pictures/Screenshot%202026-09-12%20021457.png)
+
+### Dark Mode Application Workspace
+![Dark Mode Appearance](pictures/Screenshot%202026-09-12%20044842.png)
+
+### Inverted Mode Comedy & Match Evaluation
+![Inverted Mode Comedy](pictures/Screenshot%202026-09-12%20044924.png)
+
+---
+
+## 5. Technical Stack & Local Execution
 
 - **Frontend:** Vanilla HTML5, CSS3, ES6+ JavaScript (Zero external libraries/frameworks).
 - **Audio:** Web Audio API (Zero audio asset dependencies).
@@ -99,7 +115,7 @@ python tests/run_tests.py
 
 ---
 
-## 5. Codebase Structure
+## 6. Codebase Structure
 
 ```text
 random-relay/
