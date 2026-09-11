@@ -847,6 +847,17 @@ input, textarea, select {
   justify-content: flex-start;
   position: relative;
   overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.transmission-column::-webkit-scrollbar {
+  width: 6px;
+}
+
+.transmission-column::-webkit-scrollbar-thumb {
+  background: var(--separator-strong);
+  border-radius: var(--radius-full);
 }
 
 .transmission-card {

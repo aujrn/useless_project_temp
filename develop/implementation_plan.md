@@ -1,73 +1,67 @@
-# Implementation Plan: Random Relay — Make It Funny
+# Implementation Plan: Comedic "Faah" Sound & Guaranteed Mode Enforcement
 
-Upgrade **Random Relay** with a **deliberately deadpan, overconfident, Apple-style personality** strictly following the updated [private/agent.md](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/private/agent.md) specification.
-
-> **Design Principle:** Premium interface. Questionable engineering. Completely unnecessary suffering.
+Implement the latest requirements from [agent.md](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/private/agent.md): adding the synthesized comedic **"faah" failure sound effect** (`playFailureFaah()`) and enforcing strict `pairId`-based mode selection for Guaranteed Success & Guaranteed Failure.
 
 ---
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Usability & Core Functionality Intact**: Humor will be added through dry microcopy, state commentary, progressive attempt badges, rotating receiver messages, and absurd telemetry—without breaking real messaging, animation speeds, or calculation accuracy.
-> - **Dry, Deadpan Voice**: No memes, slang (LOL/OMG/BRO), or cartoonish graphics. The humor emerges purely from the contrast between ultra-polished Apple UI and completely unnecessary architecture.
+> - **Zero External Audio Assets**: The comedic descending "faah" vocal sound effect will be synthesized live via Web Audio API (formant filtering & pitch descent), maintaining zero external asset dependencies.
+> - **Strict Mode Enforcement**: Guaranteed Success & Guaranteed Failure will use explicit `pairId` filtering to guarantee 100% deterministic success / failure (for $N > 1$) across single runs and 100-message experiments.
 
 ## Open Questions
 
-None. The specifications in [private/agent.md](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/private/agent.md) are comprehensive and explicit.
+None.
 
 ---
 
 ## Proposed Changes
 
-### UI & Microcopy Updates ([private/agent.md](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/private/agent.md))
+### 1. Algorithm Pair IDs & Synthesis
 
-#### [MODIFY] [index.html](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/index.html)
-- Add brand tagline below header title: *"Reliable messaging, redesigned by probability."*
-- Update empty state titles and secondary copy for Sender ("Type something. We have already built the infrastructure.") and Receiver ("It may arrive correctly. This is not guaranteed.").
-- Add an expandable **"Why does this exist?"** panel explaining the premise in dry deadpan copy ("Because someone asked for a useless project... You're welcome.").
-- Add absurd telemetry labels to Central Relay card ("Transmission complexity: High", "Practical necessity: Low").
+#### [MODIFY] [js/algorithms.js](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/js/algorithms.js)
+- Add explicit `pairId` attribute (e.g. `'caesar'`, `'atbash'`, `'reverse-case'`, `'xor-hex'`, `'base64'`, `'vigenere'`, `'binary-stream'`, `'railfence'`, `'hex-byte'`, `'symbol-token'`) to every algorithm object in `ALGORITHM_PAIRS`.
 
-#### [MODIFY] [css/styles.css](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/css/styles.css)
-- Add styles for relay secondary commentary text, milestone attempt badges, rotating receiver subtext, and the expandable "Why does this exist?" drawer.
+#### [MODIFY] [js/audio.js](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/js/audio.js)
+- Add `playFailureFaah()` method to `AudioEngine`:
+  - Synthesizes a 400ms comedic descending "faah" disappointed vocal cue using dual oscillators (sawtooth/triangle blend with smooth lowpass formant filter envelope and gentle pitch ramp down from 220Hz to 110Hz).
+  - Respects user sound toggle preferences and experiment mute state.
 
 ---
 
-### Logic & Commentary Engine
+### 2. Simulation Logic & UI Integration
 
 #### [MODIFY] [js/simulation.js](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/js/simulation.js)
-- Add deterministic state-based commentary generators for:
-  - **Relay Phases** (Idle, Selecting Encoder, Encoding, Transit, Selecting Decoder, Match, Mismatch).
-  - **Probability Ring** (N=1 "We have discovered a functioning messaging system", N=2 "Coin-flipping with infrastructure", N=3 "Getting irresponsible", N=5 "Bold strategy", N=10 "Excellent architecture. Terrible odds").
-  - **Attempt Count Progression** (Attempt 4 "We remain optimistic", Attempt 6 "This is becoming a lifestyle", Attempt 11 "Statistically, we have learned nothing").
-  - **Rotating Success/Failure Receiver Microcopy**.
-  - **Dynamic Retry Copy** ("Try again" → "One more time" → "Surely now" → "This is fine").
-  - **100-Message Experiment Milestones** (25, 50, 75, 100 msgs) & deadpan result interpretations.
-  - **Achievements / Easter Eggs** (First Success "It Worked", 5 Attempts "Persistence", 10 Attempts "Commitment", 100 Msgs "Researcher", N=1 "Efficiency").
+- Enforce `pairId` filtering in `sendMessage()` and `run100MessageExperiment()`:
+  - `guaranteed_success`: selects system where `decoder.pairId === encoder.pairId`.
+  - `guaranteed_failure`: filters active systems where `decoder.pairId !== encoder.pairId`.
 
 #### [MODIFY] [js/ui.js](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/js/ui.js)
-- Bind secondary commentary elements in Central Relay, Probability Badge, Retry Button, and Experiment Modal.
-- Render achievement toast notifications on milestones.
+- Call `this.audio.playFailureFaah()` on failure events in `messageReceived`.
+
+---
+
+### 3. Bundling & Synchronization
 
 #### [MODIFY] [js/bundle.js](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/js/bundle.js)
-- Re-bundle updated JS modules into standalone file.
+- Re-bundle updated modular JS files into standalone `js/bundle.js`.
 
-#### [MODIFY] [develop/](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/develop)
-- Synchronize root workspace into `develop/`.
+#### [MODIFY] [private/agent.md](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/private/agent.md) & [develop/](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/develop)
+- Sync `private/agent.md` and `develop/` workspace files.
 
 ---
 
 ## Verification Plan
 
 ### Automated Tests
-- Run Python test runner to verify 100% reversibility and invariant stability:
+- Run Python test runner:
   ```bash
   python tests/run_tests.py
   ```
+  Verify 100% pass across reversibility and simulation invariants.
 
 ### Manual Verification
-1. Verify dry deadpan commentary during transmission phases.
-2. Verify probability ring subtext changes accurately when stepping $N$ from 1 to 10.
-3. Test retry progression ("Try again" → "One more time" → "Surely now" → "This is fine") and milestone attempt badges.
-4. Verify 100-Message Experiment milestone messages (25, 50, 75, 100) and deadpan result summaries.
-5. Verify expandable "Why does this exist?" drawer.
+1. Test message submission on Guaranteed Failure mode to hear the comedic "faah" sound effect.
+2. Test Guaranteed Success mode to confirm 100% success rate.
+3. Test 100-Message Experiment under Guaranteed Success (100% match) and Guaranteed Failure (0% match for $N > 1$).

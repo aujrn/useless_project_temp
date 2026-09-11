@@ -84,6 +84,16 @@ Added a clean expandable `<details class="why-panel">` in the Sender panel:
 
 ---
 
+### 10. Inverted Simulation Mode Comedy
+- **Ironic Mode Swap:** 
+  - Clicking **"Guaranteed Success"** forces a mismatching decoder (0% success rate, playing the disappointed "faah" vocal sound!).
+  - Clicking **"Guaranteed Failure"** forces the matching decoder (100% success rate!).
+- **Dynamic Telemetry Subtext:**
+  - *Guaranteed Success:* `"0% match · You selected Guaranteed Success. Probability took that personally."`
+  - *Guaranteed Failure:* `"100% match · You selected Guaranteed Failure. The system refuses to cooperate with your pessimism."`
+
+---
+
 ## Verification Results
 
 ### Automated Test Suite (`python tests/run_tests.py`)

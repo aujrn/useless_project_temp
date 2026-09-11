@@ -8,6 +8,7 @@ export const ALGORITHM_PAIRS = [
   {
     id: 1,
     key: 'caesar',
+    pairId: 'caesar',
     name: 'Caesar Shift (+3)',
     encoderName: 'Encoder 01 · Caesar (+3)',
     decoderName: 'Decoder 01 · Caesar (-3)',
@@ -30,6 +31,7 @@ export const ALGORITHM_PAIRS = [
   {
     id: 2,
     key: 'atbash',
+    pairId: 'atbash',
     name: 'Atbash Substitution',
     encoderName: 'Encoder 02 · Atbash Cipher',
     decoderName: 'Decoder 02 · Atbash Inverse',
@@ -58,6 +60,7 @@ export const ALGORITHM_PAIRS = [
   {
     id: 3,
     key: 'reverse-case',
+    pairId: 'reverse-case',
     name: 'Reverse + Invert Case',
     encoderName: 'Encoder 03 · Reverse & Invert',
     decoderName: 'Decoder 03 · Revert & Restore',
@@ -85,6 +88,7 @@ export const ALGORITHM_PAIRS = [
   {
     id: 4,
     key: 'xor-hex',
+    pairId: 'xor-hex',
     name: 'XOR Mask (0x5A)',
     encoderName: 'Encoder 04 · XOR 0x5A Hex',
     decoderName: 'Decoder 04 · XOR 0x5A Revert',
@@ -116,6 +120,7 @@ export const ALGORITHM_PAIRS = [
   {
     id: 5,
     key: 'base64',
+    pairId: 'base64',
     name: 'Base64 Representation',
     encoderName: 'Encoder 05 · Base64 Wrapper',
     decoderName: 'Decoder 05 · Base64 Unwrapper',
@@ -144,6 +149,7 @@ export const ALGORITHM_PAIRS = [
   {
     id: 6,
     key: 'vigenere',
+    pairId: 'vigenere',
     name: 'Vigenère ("ENIGMA")',
     encoderName: 'Encoder 06 · Vigenère Polyalphabetic',
     decoderName: 'Decoder 06 · Vigenère Decryptor',
@@ -174,6 +180,7 @@ export const ALGORITHM_PAIRS = [
   {
     id: 7,
     key: 'binary-stream',
+    pairId: 'binary-stream',
     name: '8-bit Binary Stream',
     encoderName: 'Encoder 07 · Binary Stream (8-bit)',
     decoderName: 'Decoder 07 · Binary to Text',
@@ -203,6 +210,7 @@ export const ALGORITHM_PAIRS = [
   {
     id: 8,
     key: 'railfence',
+    pairId: 'railfence',
     name: 'Rail Fence (3 Rails)',
     encoderName: 'Encoder 08 · Rail Fence Zig-Zag',
     decoderName: 'Decoder 08 · Rail Fence Reconstruct',
@@ -255,6 +263,7 @@ export const ALGORITHM_PAIRS = [
   {
     id: 9,
     key: 'hex-byte',
+    pairId: 'hex-byte',
     name: 'Hexadecimal Stream',
     encoderName: 'Encoder 09 · Hex Byte Stream',
     decoderName: 'Decoder 09 · Hex Byte Converter',
@@ -286,6 +295,7 @@ export const ALGORITHM_PAIRS = [
   {
     id: 10,
     key: 'symbol-token',
+    pairId: 'symbol-token',
     name: 'Symbol Token Substitution',
     encoderName: 'Encoder 10 · Symbol Token Matrix',
     decoderName: 'Decoder 10 · Symbol Matrix Reversal',
@@ -297,7 +307,7 @@ export const ALGORITHM_PAIRS = [
         'i': 'ι', 'I': 'Ψ',
         'o': 'ω', 'O': 'Ω',
         'u': 'μ', 'U': 'θ',
-        's': 'σ', 'S': '§',
+        'σ': 's', 'S': '§',
         't': 'τ', 'T': '†',
         'r': 'ρ', 'R': '®',
         'n': 'η', 'N': 'Π'

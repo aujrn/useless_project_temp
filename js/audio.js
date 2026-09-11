@@ -113,24 +113,56 @@ export class AudioEngine {
    * Soft mismatch / muted tone
    */
   playFailureSound() {
+    this.playFailureFaah();
+  }
+
+  /**
+   * Synthesized comedic "faah" disappointed vocal sound effect
+   * Dual oscillator (sawtooth/triangle) with dynamic lowpass formant filter envelope
+   * Frequency slides down from 220Hz to 110Hz over ~400ms
+   */
+  playFailureFaah() {
     if (!this.isEnabled()) return;
     try {
       const ctx = this.getAudioContext();
       if (!ctx) return;
       const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
+      const duration = 0.42;
+
+      // Primary voice oscillator (Sawtooth)
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(220, now);
+      osc1.frequency.exponentialRampToValueAtTime(110, now + duration);
+
+      // Sub harmonic oscillator (Triangle for warmth)
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(216, now); // Slight detune for vocal richness
+      osc2.frequency.exponentialRampToValueAtTime(108, now + duration);
+
+      // Vocal formant lowpass filter (simulates "aaah/faah" sound)
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(3.5, now);
+      filter.frequency.setValueAtTime(750, now);
+      filter.frequency.exponentialRampToValueAtTime(320, now + duration);
+
+      // Master gain envelope
       const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(180, now);
-      osc.frequency.exponentialRampToValueAtTime(105, now + 0.16);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.08, now + 0.03); // Quick attack
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration); // Smooth release
 
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-
-      osc.connect(gain);
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.16);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + duration);
+      osc2.stop(now + duration);
     } catch {}
   }
 }

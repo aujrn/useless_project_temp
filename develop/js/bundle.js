@@ -15,6 +15,7 @@ const ALGORITHM_PAIRS = [
   {
     id: 1,
     key: 'caesar',
+    pairId: 'caesar',
     name: 'Caesar Shift (+3)',
     encoderName: 'Encoder 01 · Caesar (+3)',
     decoderName: 'Decoder 01 · Caesar (-3)',
@@ -37,6 +38,7 @@ const ALGORITHM_PAIRS = [
   {
     id: 2,
     key: 'atbash',
+    pairId: 'atbash',
     name: 'Atbash Substitution',
     encoderName: 'Encoder 02 · Atbash Cipher',
     decoderName: 'Decoder 02 · Atbash Inverse',
@@ -65,6 +67,7 @@ const ALGORITHM_PAIRS = [
   {
     id: 3,
     key: 'reverse-case',
+    pairId: 'reverse-case',
     name: 'Reverse + Invert Case',
     encoderName: 'Encoder 03 · Reverse & Invert',
     decoderName: 'Decoder 03 · Revert & Restore',
@@ -92,6 +95,7 @@ const ALGORITHM_PAIRS = [
   {
     id: 4,
     key: 'xor-hex',
+    pairId: 'xor-hex',
     name: 'XOR Mask (0x5A)',
     encoderName: 'Encoder 04 · XOR 0x5A Hex',
     decoderName: 'Decoder 04 · XOR 0x5A Revert',
@@ -123,6 +127,7 @@ const ALGORITHM_PAIRS = [
   {
     id: 5,
     key: 'base64',
+    pairId: 'base64',
     name: 'Base64 Representation',
     encoderName: 'Encoder 05 · Base64 Wrapper',
     decoderName: 'Decoder 05 · Base64 Unwrapper',
@@ -151,6 +156,7 @@ const ALGORITHM_PAIRS = [
   {
     id: 6,
     key: 'vigenere',
+    pairId: 'vigenere',
     name: 'Vigenère ("ENIGMA")',
     encoderName: 'Encoder 06 · Vigenère Polyalphabetic',
     decoderName: 'Decoder 06 · Vigenère Decryptor',
@@ -181,6 +187,7 @@ const ALGORITHM_PAIRS = [
   {
     id: 7,
     key: 'binary-stream',
+    pairId: 'binary-stream',
     name: '8-bit Binary Stream',
     encoderName: 'Encoder 07 · Binary Stream (8-bit)',
     decoderName: 'Decoder 07 · Binary to Text',
@@ -210,6 +217,7 @@ const ALGORITHM_PAIRS = [
   {
     id: 8,
     key: 'railfence',
+    pairId: 'railfence',
     name: 'Rail Fence (3 Rails)',
     encoderName: 'Encoder 08 · Rail Fence Zig-Zag',
     decoderName: 'Decoder 08 · Rail Fence Reconstruct',
@@ -262,6 +270,7 @@ const ALGORITHM_PAIRS = [
   {
     id: 9,
     key: 'hex-byte',
+    pairId: 'hex-byte',
     name: 'Hexadecimal Stream',
     encoderName: 'Encoder 09 · Hex Byte Stream',
     decoderName: 'Decoder 09 · Hex Byte Converter',
@@ -293,6 +302,7 @@ const ALGORITHM_PAIRS = [
   {
     id: 10,
     key: 'symbol-token',
+    pairId: 'symbol-token',
     name: 'Symbol Token Substitution',
     encoderName: 'Encoder 10 · Symbol Token Matrix',
     decoderName: 'Decoder 10 · Symbol Matrix Reversal',
@@ -304,7 +314,7 @@ const ALGORITHM_PAIRS = [
         'i': 'ι', 'I': 'Ψ',
         'o': 'ω', 'O': 'Ω',
         'u': 'μ', 'U': 'θ',
-        's': 'σ', 'S': '§',
+        'σ': 's', 'S': '§',
         't': 'τ', 'T': '†',
         'r': 'ρ', 'R': '®',
         'n': 'η', 'N': 'Π'
@@ -517,24 +527,56 @@ class AudioEngine {
    * Soft mismatch / muted tone
    */
   playFailureSound() {
+    this.playFailureFaah();
+  }
+
+  /**
+   * Synthesized comedic "faah" disappointed vocal sound effect
+   * Dual oscillator (sawtooth/triangle) with dynamic lowpass formant filter envelope
+   * Frequency slides down from 220Hz to 110Hz over ~400ms
+   */
+  playFailureFaah() {
     if (!this.isEnabled()) return;
     try {
       const ctx = this.getAudioContext();
       if (!ctx) return;
       const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
+      const duration = 0.42;
+
+      // Primary voice oscillator (Sawtooth)
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(220, now);
+      osc1.frequency.exponentialRampToValueAtTime(110, now + duration);
+
+      // Sub harmonic oscillator (Triangle for warmth)
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(216, now); // Slight detune for vocal richness
+      osc2.frequency.exponentialRampToValueAtTime(108, now + duration);
+
+      // Vocal formant lowpass filter (simulates "aaah/faah" sound)
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(3.5, now);
+      filter.frequency.setValueAtTime(750, now);
+      filter.frequency.exponentialRampToValueAtTime(320, now + duration);
+
+      // Master gain envelope
       const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(180, now);
-      osc.frequency.exponentialRampToValueAtTime(105, now + 0.16);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.08, now + 0.03); // Quick attack
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration); // Smooth release
 
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-
-      osc.connect(gain);
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.16);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + duration);
+      osc2.stop(now + duration);
     } catch {}
   }
 }
@@ -620,8 +662,8 @@ class MessagingSimulator {
   }
 
   getProbability() {
-    if (this.mode === 'guaranteed_success') return 1.0;
-    if (this.mode === 'guaranteed_failure') return 0.0;
+    if (this.mode === 'guaranteed_success') return 0.0; // Inverted comedy rule: Guaranteed Success fails
+    if (this.mode === 'guaranteed_failure') return 1.0; // Inverted comedy rule: Guaranteed Failure succeeds
     return 1 / this.systemCount;
   }
 
@@ -629,7 +671,7 @@ class MessagingSimulator {
     const p = this.getProbability();
     const percent = (p * 100).toFixed(p === 1 || p === 0 ? 0 : 1);
     return {
-      ratio: this.mode === 'random' ? `1 of ${this.systemCount}` : (this.mode === 'guaranteed_success' ? '100%' : '0%'),
+      ratio: this.mode === 'random' ? `1 of ${this.systemCount}` : (this.mode === 'guaranteed_success' ? '0%' : '100%'),
       percent: `${percent}%`,
       value: p
     };
@@ -686,6 +728,8 @@ class MessagingSimulator {
    */
   getProbabilitySubtext() {
     const p = this.getProbabilityFormatted();
+    if (this.mode === 'guaranteed_success') return `0% match · You selected Guaranteed Success. Probability took that personally.`;
+    if (this.mode === 'guaranteed_failure') return `100% match · You selected Guaranteed Failure. The system refuses to cooperate with your pessimism.`;
     if (this.systemCount === 1) return `${p.percent} match · We have discovered a functioning messaging system.`;
     if (this.systemCount === 2) return `${p.percent} match · Coin-flipping, but with infrastructure.`;
     if (this.systemCount === 3) return `${p.percent} match · This is already getting irresponsible.`;
@@ -746,10 +790,10 @@ class MessagingSimulator {
       return null;
     }
 
-    // Check Guaranteed Failure constraint when N = 1 (Section 4)
-    if (this.mode === 'guaranteed_failure' && this.systemCount === 1) {
+    // Check Guaranteed Success (which fails) constraint when N = 1
+    if (this.mode === 'guaranteed_success' && this.systemCount === 1) {
       this.emit('error', {
-        message: 'Guaranteed Failure is impossible with 1 system (only 1 decoder exists!). Increase systems to fail reliably.'
+        message: 'Guaranteed Success is instructed to fail, but with 1 system (only 1 decoder exists!), failure is impossible. Increase systems to fail reliably.'
       });
       return null;
     }
@@ -851,14 +895,16 @@ class MessagingSimulator {
 
       await this._delay(200);
 
-      // Apply Simulation Mode logic (Section 4)
+      // Apply Simulation Mode logic (Inverted comedy rule)
       let selectedDecoder = null;
       if (this.mode === 'guaranteed_success') {
-        selectedDecoder = selectedEncoder; // Matching decoder
-      } else if (this.mode === 'guaranteed_failure') {
-        const otherDecoders = active.filter((d) => d.id !== selectedEncoder.id);
+        // Guaranteed Success button clicked -> Force Failure by picking mismatching decoder!
+        const otherDecoders = active.filter((d) => (d.pairId || d.id) !== (selectedEncoder.pairId || selectedEncoder.id));
         const randIdx = Math.floor(Math.random() * otherDecoders.length);
         selectedDecoder = otherDecoders[randIdx] || selectedEncoder;
+      } else if (this.mode === 'guaranteed_failure') {
+        // Guaranteed Failure button clicked -> Force Success by picking matching decoder!
+        selectedDecoder = selectedEncoder;
       } else {
         // Random mode (uniformly random independent selection)
         const decoderIndex = Math.floor(Math.random() * active.length);
@@ -883,7 +929,7 @@ class MessagingSimulator {
 
       // Step 6: Decoding & Compatibility evaluation (900 ms)
       await this._delay(200);
-      const isMatch = selectedEncoder.id === selectedDecoder.id;
+      const isMatch = (selectedEncoder.pairId || selectedEncoder.id) === (selectedDecoder.pairId || selectedDecoder.id);
       messageRecord.matched = isMatch;
 
       let finalDecodedText = '';
@@ -982,16 +1028,18 @@ class MessagingSimulator {
       const enc = active[Math.floor(Math.random() * active.length)];
       // Pick decoder based on mode
       let dec = null;
-      if (this.mode === 'guaranteed_success') {
-        dec = enc;
-      } else if (this.mode === 'guaranteed_failure' && active.length > 1) {
-        const others = active.filter((d) => d.id !== enc.id);
+      if (this.mode === 'guaranteed_success' && active.length > 1) {
+        // Guaranteed Success -> Fails!
+        const others = active.filter((d) => (d.pairId || d.id) !== (enc.pairId || enc.id));
         dec = others[Math.floor(Math.random() * others.length)];
+      } else if (this.mode === 'guaranteed_failure') {
+        // Guaranteed Failure -> Succeeds!
+        dec = enc;
       } else {
         dec = active[Math.floor(Math.random() * active.length)];
       }
 
-      const match = enc.id === dec.id;
+      const match = (enc.pairId || enc.id) === (dec.pairId || dec.id);
       if (match) succCount++;
       else failCount++;
 

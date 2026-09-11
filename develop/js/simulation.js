@@ -79,8 +79,8 @@ export class MessagingSimulator {
   }
 
   getProbability() {
-    if (this.mode === 'guaranteed_success') return 1.0;
-    if (this.mode === 'guaranteed_failure') return 0.0;
+    if (this.mode === 'guaranteed_success') return 0.0; // Inverted comedy rule: Guaranteed Success fails
+    if (this.mode === 'guaranteed_failure') return 1.0; // Inverted comedy rule: Guaranteed Failure succeeds
     return 1 / this.systemCount;
   }
 
@@ -88,7 +88,7 @@ export class MessagingSimulator {
     const p = this.getProbability();
     const percent = (p * 100).toFixed(p === 1 || p === 0 ? 0 : 1);
     return {
-      ratio: this.mode === 'random' ? `1 of ${this.systemCount}` : (this.mode === 'guaranteed_success' ? '100%' : '0%'),
+      ratio: this.mode === 'random' ? `1 of ${this.systemCount}` : (this.mode === 'guaranteed_success' ? '0%' : '100%'),
       percent: `${percent}%`,
       value: p
     };
@@ -145,6 +145,8 @@ export class MessagingSimulator {
    */
   getProbabilitySubtext() {
     const p = this.getProbabilityFormatted();
+    if (this.mode === 'guaranteed_success') return `0% match · You selected Guaranteed Success. Probability took that personally.`;
+    if (this.mode === 'guaranteed_failure') return `100% match · You selected Guaranteed Failure. The system refuses to cooperate with your pessimism.`;
     if (this.systemCount === 1) return `${p.percent} match · We have discovered a functioning messaging system.`;
     if (this.systemCount === 2) return `${p.percent} match · Coin-flipping, but with infrastructure.`;
     if (this.systemCount === 3) return `${p.percent} match · This is already getting irresponsible.`;
@@ -205,10 +207,10 @@ export class MessagingSimulator {
       return null;
     }
 
-    // Check Guaranteed Failure constraint when N = 1 (Section 4)
-    if (this.mode === 'guaranteed_failure' && this.systemCount === 1) {
+    // Check Guaranteed Success (which fails) constraint when N = 1
+    if (this.mode === 'guaranteed_success' && this.systemCount === 1) {
       this.emit('error', {
-        message: 'Guaranteed Failure is impossible with 1 system (only 1 decoder exists!). Increase systems to fail reliably.'
+        message: 'Guaranteed Success is instructed to fail, but with 1 system (only 1 decoder exists!), failure is impossible. Increase systems to fail reliably.'
       });
       return null;
     }
@@ -310,14 +312,16 @@ export class MessagingSimulator {
 
       await this._delay(200);
 
-      // Apply Simulation Mode logic (Section 4)
+      // Apply Simulation Mode logic (Inverted comedy rule)
       let selectedDecoder = null;
       if (this.mode === 'guaranteed_success') {
-        selectedDecoder = selectedEncoder; // Matching decoder
-      } else if (this.mode === 'guaranteed_failure') {
-        const otherDecoders = active.filter((d) => d.id !== selectedEncoder.id);
+        // Guaranteed Success button clicked -> Force Failure by picking mismatching decoder!
+        const otherDecoders = active.filter((d) => (d.pairId || d.id) !== (selectedEncoder.pairId || selectedEncoder.id));
         const randIdx = Math.floor(Math.random() * otherDecoders.length);
         selectedDecoder = otherDecoders[randIdx] || selectedEncoder;
+      } else if (this.mode === 'guaranteed_failure') {
+        // Guaranteed Failure button clicked -> Force Success by picking matching decoder!
+        selectedDecoder = selectedEncoder;
       } else {
         // Random mode (uniformly random independent selection)
         const decoderIndex = Math.floor(Math.random() * active.length);
@@ -342,7 +346,7 @@ export class MessagingSimulator {
 
       // Step 6: Decoding & Compatibility evaluation (900 ms)
       await this._delay(200);
-      const isMatch = selectedEncoder.id === selectedDecoder.id;
+      const isMatch = (selectedEncoder.pairId || selectedEncoder.id) === (selectedDecoder.pairId || selectedDecoder.id);
       messageRecord.matched = isMatch;
 
       let finalDecodedText = '';
@@ -441,16 +445,18 @@ export class MessagingSimulator {
       const enc = active[Math.floor(Math.random() * active.length)];
       // Pick decoder based on mode
       let dec = null;
-      if (this.mode === 'guaranteed_success') {
-        dec = enc;
-      } else if (this.mode === 'guaranteed_failure' && active.length > 1) {
-        const others = active.filter((d) => d.id !== enc.id);
+      if (this.mode === 'guaranteed_success' && active.length > 1) {
+        // Guaranteed Success -> Fails!
+        const others = active.filter((d) => (d.pairId || d.id) !== (enc.pairId || enc.id));
         dec = others[Math.floor(Math.random() * others.length)];
+      } else if (this.mode === 'guaranteed_failure') {
+        // Guaranteed Failure -> Succeeds!
+        dec = enc;
       } else {
         dec = active[Math.floor(Math.random() * active.length)];
       }
 
-      const match = enc.id === dec.id;
+      const match = (enc.pairId || enc.id) === (dec.pairId || dec.id);
       if (match) succCount++;
       else failCount++;
 
