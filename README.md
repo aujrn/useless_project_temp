@@ -59,20 +59,37 @@ The central joke is **not** that the software is broken. The central joke is tha
 - **Audio:** Web Audio API (Zero audio asset dependencies).
 - **Testing:** Python 3 automated test suite (`tests/run_tests.py`).
 
-### Installation & Execution
+### 1-Click Automated Setup (Windows)
 
-```bash
-git clone https://github.com/aujrn/useless_project_temp.git
-cd useless_project_temp
+Simply double-click `setup.bat` (or run `python setup.py` in your terminal):
+
+```cmd
+setup.bat
 ```
 
-Open `index.html` directly in any web browser, or launch a local server:
+This automatically:
+1. Re-builds the standalone JavaScript bundle (`js/bundle.js`).
+2. Synchronizes the `develop/` workspace mirror.
+3. Runs the automated verification test suite (`tests/run_tests.py`).
+4. Starts the local HTTP server on `http://localhost:8000` and opens your default browser.
 
+### Cloudflare Pages Deployment ⚡ (Recommended)
+
+Random Relay is **100% optimized for Cloudflare Pages** with zero-dependency static edge distribution and custom HTTP security headers ([`_headers`](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/_headers)).
+
+#### Option 1: Git Integration (Easiest)
+1. Open [Cloudflare Dashboard](https://dash.cloudflare.com) → **Workers & Pages** → **Create application** → **Pages** → **Connect to Git**.
+2. Select repository: `useless_project_temp`.
+3. Set **Framework preset**: `None` (Static HTML).
+4. Set **Build output directory**: `/` (Root).
+5. Click **Save and Deploy**. Cloudflare will deploy your app on global edge servers automatically on every commit!
+
+#### Option 2: Direct Upload via Wrangler CLI
 ```bash
-python -m http.server 8000
+npx wrangler pages deploy . --project-name=random-relay
 ```
 
-Then visit `http://localhost:8000`.
+A GitHub Actions workflow is also provided at [`.github/workflows/cloudflare-pages.yml`](file:///c:/Users/abhir/OneDrive/Documents/GitHub/useless_project_temp/.github/workflows/cloudflare-pages.yml).
 
 ### Running Automated Verification Suite
 

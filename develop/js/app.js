@@ -6,7 +6,10 @@
 import { MessagingSimulator } from './simulation.js';
 import { SimulatorUI } from './ui.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
+  if (window.__appInitialized) return;
+  window.__appInitialized = true;
+
   // Initialize Simulator with default of 3 systems (Section 12 of agent.md)
   const simulator = new MessagingSimulator({
     systemCount: 3,
@@ -23,4 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   console.log('⚡ Random Encoder / Decoder Messaging Simulator initialized.');
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
