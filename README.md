@@ -6,12 +6,11 @@
 *The Apple-Inspired Random Encoder / Decoder Messaging Simulator*
 
 ## Basic Details
-### Team Name: [Name]
+### Team Name: Core2k5
 
 ### Team Members
-- Team Lead: [Name] - [College]
-- Member 2: [Name] - [College]
-- Member 3: [Name] - [College]
+- Team Lead: Arjun Krishna  - Sree Narayana Gurukulam College of Engineering
+- Member 2: Abhiram P - Sree Narayana Gurukulam College of Engineering
 
 ### Project Description
 Random Relay is an Apple-inspired messaging simulator that routes messages through randomly selected reversible encoders and decoders. If the receiver randomly draws the matching decoder, the original plaintext is recovered; otherwise, delightfully authentic corrupted gibberish is delivered.
