@@ -504,6 +504,27 @@ export class SimulatorUI {
             <span class="details-label">ATTEMPT</span>
             <span class="details-val">#${msg.attemptNumber}</span>
           </div>
+
+          <!-- Section 16 of agent.md: Expanded Transmission Timeline -->
+          <div class="event-timeline-section" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--separator);">
+            <div class="timeline-step">✓ Message created</div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step">✓ ${this.escapeHTML(msg.encoder.encoderName)} selected</div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step">✓ Message encoded</div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step">✓ Payload transmitted</div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step">✓ ${this.escapeHTML(msg.decoder.decoderName)} selected</div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step ${isSuccess ? 'step-success' : 'step-failure'}">
+              ${isSuccess ? '✓ Decoder matched' : '✕ Decoder mismatch'}
+            </div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step ${isSuccess ? 'step-success' : 'step-failure'}">
+              ${isSuccess ? '✓ Original plaintext restored' : '✕ Message corrupted'}
+            </div>
+          </div>
         </div>
       </details>
     `;
@@ -678,7 +699,32 @@ export class SimulatorUI {
       this.expDiffBadge.textContent = result.difference;
       this.expDiffBadge.className = `exp-diff-tag ${result.difference.startsWith('+') ? 'diff-positive' : 'diff-negative'}`;
       this.expProgressText.textContent = 'Experiment complete!';
+
+      this.renderExperimentChart(result);
     }
+  }
+
+  /**
+   * Render SVG Cumulative Success Rate Line Chart (Section 12 of agent.md)
+   */
+  renderExperimentChart(result) {
+    const refLine = document.getElementById('expChartRefLine');
+    const path = document.getElementById('expChartPath');
+    if (!refLine || !path || !result.historyPoints) return;
+
+    const expectedPct = this.simulator.getProbability() * 100;
+    const refY = (100 - Math.min(100, Math.max(0, expectedPct))).toFixed(1);
+    refLine.setAttribute('y1', refY);
+    refLine.setAttribute('y2', refY);
+
+    const pts = result.historyPoints;
+    let d = '';
+    for (let i = 0; i < pts.length; i++) {
+      const x = ((i / (pts.length - 1)) * 300).toFixed(1);
+      const y = (100 - Math.min(100, Math.max(0, pts[i]))).toFixed(1);
+      d += `${i === 0 ? 'M' : 'L'} ${x} ${y} `;
+    }
+    path.setAttribute('d', d.trim());
   }
 
   resetChatUI() {

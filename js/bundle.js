@@ -5,10 +5,10 @@
 'use strict';
 
 // --- algorithms.js ---
-
 /**
  * Core Encoder / Decoder Algorithms
  * 10 Paired Reversible Systems & Deterministic Corruption Logic
+ * Fully Unicode-safe (supporting Emojis 😀🚀, Malayalam മലയാളം, symbols, newlines, tabs)
  */
 
 const ALGORITHM_PAIRS = [
@@ -18,7 +18,7 @@ const ALGORITHM_PAIRS = [
     name: 'Caesar Shift (+3)',
     encoderName: 'Encoder 01 · Caesar (+3)',
     decoderName: 'Decoder 01 · Caesar (-3)',
-    description: 'Rotates each alphabetical character forward by 3 positions.',
+    description: 'Rotates alphabetical characters forward by 3 positions, preserving Unicode & symbols.',
     encode: (text) => {
       return text.replace(/[a-zA-Z]/g, (char) => {
         const code = char.charCodeAt(0);
@@ -40,7 +40,7 @@ const ALGORITHM_PAIRS = [
     name: 'Atbash Substitution',
     encoderName: 'Encoder 02 · Atbash Cipher',
     decoderName: 'Decoder 02 · Atbash Inverse',
-    description: 'Replaces each letter with its symmetric opposite in the alphabet (A ↔ Z, B ↔ Y).',
+    description: 'Replaces letters with their symmetric alphabet opposite (A ↔ Z, B ↔ Y).',
     encode: (text) => {
       return text.replace(/[a-zA-Z]/g, (char) => {
         const code = char.charCodeAt(0);
@@ -68,22 +68,19 @@ const ALGORITHM_PAIRS = [
     name: 'Reverse + Invert Case',
     encoderName: 'Encoder 03 · Reverse & Invert',
     decoderName: 'Decoder 03 · Revert & Restore',
-    description: 'Reverses character order and toggles uppercase to lowercase and vice versa.',
+    description: 'Reverses grapheme/character order and toggles letter casing, emoji-safe.',
     encode: (text) => {
-      const toggled = text
-        .split('')
-        .map((c) => {
-          if (c >= 'a' && c <= 'z') return c.toUpperCase();
-          if (c >= 'A' && c <= 'Z') return c.toLowerCase();
-          return c;
-        })
-        .join('');
-      return toggled.split('').reverse().join('');
+      const chars = Array.from(text);
+      const toggled = chars.map((c) => {
+        if (c >= 'a' && c <= 'z') return c.toUpperCase();
+        if (c >= 'A' && c <= 'Z') return c.toLowerCase();
+        return c;
+      });
+      return toggled.reverse().join('');
     },
     decode: (payload) => {
-      const reversed = payload.split('').reverse().join('');
-      return reversed
-        .split('')
+      const chars = Array.from(payload).reverse();
+      return chars
         .map((c) => {
           if (c >= 'a' && c <= 'z') return c.toUpperCase();
           if (c >= 'A' && c <= 'Z') return c.toLowerCase();
@@ -98,26 +95,26 @@ const ALGORITHM_PAIRS = [
     name: 'XOR Mask (0x5A)',
     encoderName: 'Encoder 04 · XOR 0x5A Hex',
     decoderName: 'Decoder 04 · XOR 0x5A Revert',
-    description: 'Applies bitwise XOR with 0x5A key and formats as hyphenated hex bytes.',
+    description: 'Applies bitwise XOR 0x5A over UTF-8 byte stream and formats as hyphenated hex.',
     encode: (text) => {
-      const bytes = [];
-      for (let i = 0; i < text.length; i++) {
-        const code = text.charCodeAt(i);
-        const masked = (code ^ 0x5a) & 0xff;
-        bytes.push(masked.toString(16).padStart(2, '0').toUpperCase());
+      const bytes = new TextEncoder().encode(text);
+      const hexArr = [];
+      for (let i = 0; i < bytes.length; i++) {
+        const masked = (bytes[i] ^ 0x5a) & 0xff;
+        hexArr.push(masked.toString(16).padStart(2, '0').toUpperCase());
       }
-      return bytes.join('-');
+      return hexArr.join('-');
     },
     decode: (payload) => {
       try {
         const parts = payload.split('-');
-        let out = '';
-        for (const part of parts) {
-          const byte = parseInt(part, 16);
-          if (isNaN(byte)) return null;
-          out += String.fromCharCode((byte ^ 0x5a) & 0xff);
+        const bytes = new Uint8Array(parts.length);
+        for (let i = 0; i < parts.length; i++) {
+          const b = parseInt(parts[i], 16);
+          if (isNaN(b)) return null;
+          bytes[i] = (b ^ 0x5a) & 0xff;
         }
-        return out;
+        return new TextDecoder().decode(bytes);
       } catch {
         return null;
       }
@@ -126,28 +123,26 @@ const ALGORITHM_PAIRS = [
   {
     id: 5,
     key: 'base64',
-    name: 'Base64 Tokenizer',
+    name: 'Base64 Representation',
     encoderName: 'Encoder 05 · Base64 Wrapper',
     decoderName: 'Decoder 05 · Base64 Unwrapper',
     description: 'Encodes Unicode text into standard Base64 representation (clearly labeled as encoding, not encryption).',
     encode: (text) => {
-      try {
-        return btoa(encodeURIComponent(text).replace(/%([0-9A-F]{2})/g, (match, p1) => {
-          return String.fromCharCode(parseInt('0x' + p1, 16));
-        }));
-      } catch {
-        return btoa(text);
+      const bytes = new TextEncoder().encode(text);
+      let binStr = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binStr += String.fromCharCode(bytes[i]);
       }
+      return btoa(binStr);
     },
     decode: (payload) => {
       try {
-        const decoded = atob(payload);
-        return decodeURIComponent(
-          decoded
-            .split('')
-            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-            .join('')
-        );
+        const binStr = atob(payload);
+        const bytes = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) {
+          bytes[i] = binStr.charCodeAt(i);
+        }
+        return new TextDecoder().decode(bytes);
       } catch {
         return null;
       }
@@ -189,22 +184,24 @@ const ALGORITHM_PAIRS = [
     name: '8-bit Binary Stream',
     encoderName: 'Encoder 07 · Binary Stream (8-bit)',
     decoderName: 'Decoder 07 · Binary to Text',
-    description: 'Converts each character into an 8-bit binary representation separated by spaces.',
+    description: 'Converts UTF-8 bytes into 8-bit binary strings separated by spaces.',
     encode: (text) => {
-      return text
-        .split('')
-        .map((c) => c.charCodeAt(0).toString(2).padStart(8, '0'))
-        .join(' ');
+      const bytes = new TextEncoder().encode(text);
+      const binArr = [];
+      for (let i = 0; i < bytes.length; i++) {
+        binArr.push(bytes[i].toString(2).padStart(8, '0'));
+      }
+      return binArr.join(' ');
     },
     decode: (payload) => {
       try {
         const chunks = payload.trim().split(/\s+/);
-        let out = '';
-        for (const chunk of chunks) {
-          if (!/^[01]{1,16}$/.test(chunk)) return null;
-          out += String.fromCharCode(parseInt(chunk, 2));
+        const bytes = new Uint8Array(chunks.length);
+        for (let i = 0; i < chunks.length; i++) {
+          if (!/^[01]{8}$/.test(chunks[i])) return null;
+          bytes[i] = parseInt(chunks[i], 2);
         }
-        return out;
+        return new TextDecoder().decode(bytes);
       } catch {
         return null;
       }
@@ -216,14 +213,15 @@ const ALGORITHM_PAIRS = [
     name: 'Rail Fence (3 Rails)',
     encoderName: 'Encoder 08 · Rail Fence Zig-Zag',
     decoderName: 'Decoder 08 · Rail Fence Reconstruct',
-    description: 'Transposition cipher writing characters in a 3-rail zig-zag pattern.',
+    description: 'Transposition cipher placing characters in a 3-rail zig-zag pattern, emoji-safe.',
     encode: (text) => {
-      if (text.length <= 3) return text;
+      const chars = Array.from(text);
+      if (chars.length <= 3) return text;
       const rails = [[], [], []];
       let rail = 0;
       let direction = 1;
-      for (let i = 0; i < text.length; i++) {
-        rails[rail].push(text[i]);
+      for (let i = 0; i < chars.length; i++) {
+        rails[rail].push(chars[i]);
         rail += direction;
         if (rail === 2) direction = -1;
         else if (rail === 0) direction = 1;
@@ -231,11 +229,12 @@ const ALGORITHM_PAIRS = [
       return rails[0].join('') + rails[1].join('') + rails[2].join('');
     },
     decode: (payload) => {
-      if (payload.length <= 3) return payload;
+      const chars = Array.from(payload);
+      if (chars.length <= 3) return payload;
       const railLengths = [0, 0, 0];
       let rail = 0;
       let direction = 1;
-      for (let i = 0; i < payload.length; i++) {
+      for (let i = 0; i < chars.length; i++) {
         railLengths[rail]++;
         rail += direction;
         if (rail === 2) direction = -1;
@@ -243,15 +242,15 @@ const ALGORITHM_PAIRS = [
       }
 
       const rails = [
-        payload.slice(0, railLengths[0]).split(''),
-        payload.slice(railLengths[0], railLengths[0] + railLengths[1]).split(''),
-        payload.slice(railLengths[0] + railLengths[1]).split('')
+        chars.slice(0, railLengths[0]),
+        chars.slice(railLengths[0], railLengths[0] + railLengths[1]),
+        chars.slice(railLengths[0] + railLengths[1])
       ];
 
       let out = '';
       rail = 0;
       direction = 1;
-      for (let i = 0; i < payload.length; i++) {
+      for (let i = 0; i < chars.length; i++) {
         out += rails[rail].shift();
         rail += direction;
         if (rail === 2) direction = -1;
@@ -266,11 +265,12 @@ const ALGORITHM_PAIRS = [
     name: 'Hexadecimal Stream',
     encoderName: 'Encoder 09 · Hex Byte Stream',
     decoderName: 'Decoder 09 · Hex Byte Converter',
-    description: 'Converts UTF-8 characters into contiguous uppercase hexadecimal byte representation.',
+    description: 'Converts UTF-8 byte stream into contiguous uppercase hexadecimal bytes.',
     encode: (text) => {
+      const bytes = new TextEncoder().encode(text);
       let hex = '';
-      for (let i = 0; i < text.length; i++) {
-        hex += text.charCodeAt(i).toString(16).padStart(2, '0').toUpperCase();
+      for (let i = 0; i < bytes.length; i++) {
+        hex += bytes[i].toString(16).padStart(2, '0').toUpperCase();
       }
       return '0x' + hex;
     },
@@ -278,13 +278,13 @@ const ALGORITHM_PAIRS = [
       try {
         let clean = payload.startsWith('0x') ? payload.slice(2) : payload;
         if (clean.length % 2 !== 0) return null;
-        let out = '';
+        const bytes = new Uint8Array(clean.length / 2);
         for (let i = 0; i < clean.length; i += 2) {
-          const code = parseInt(clean.substr(i, 2), 16);
-          if (isNaN(code)) return null;
-          out += String.fromCharCode(code);
+          const byteVal = parseInt(clean.substr(i, 2), 16);
+          if (isNaN(byteVal)) return null;
+          bytes[i / 2] = byteVal;
         }
-        return out;
+        return new TextDecoder().decode(bytes);
       } catch {
         return null;
       }
@@ -296,7 +296,7 @@ const ALGORITHM_PAIRS = [
     name: 'Symbol Token Substitution',
     encoderName: 'Encoder 10 · Symbol Token Matrix',
     decoderName: 'Decoder 10 · Symbol Matrix Reversal',
-    description: 'Bijective mapping exchanging vowels and select common consonants with phonetic symbols.',
+    description: 'Bijective mapping exchanging vowels and select consonants with phonetic symbols.',
     encode: (text) => {
       const map = {
         'a': 'α', 'A': 'Δ',
@@ -309,8 +309,7 @@ const ALGORITHM_PAIRS = [
         'r': 'ρ', 'R': '®',
         'n': 'η', 'N': 'Π'
       };
-      return text
-        .split('')
+      return Array.from(text)
         .map((c) => map[c] || c)
         .join('');
     },
@@ -326,8 +325,7 @@ const ALGORITHM_PAIRS = [
         'ρ': 'r', '®': 'R',
         'η': 'n', 'Π': 'N'
       };
-      return payload
-        .split('')
+      return Array.from(payload)
         .map((c) => reverseMap[c] || c)
         .join('');
     }
@@ -338,10 +336,11 @@ const ALGORITHM_PAIRS = [
  * Generate deliberate, plausible corrupted gibberish output when an incompatible
  * decoder attempts to process an encoded payload.
  *
- * Implements requirement from Section 8 of agent.md:
- * "The app should not pretend that the decoder successfully decoded the message.
- *  Instead, produce visibly corrupted/gibberish output. Examples: H3llo ░▒?9x
- *  or another deterministic corruption derived from the encoded payload."
+ * Requirements (Section 7 of agent.md):
+ * - Deterministic for given transmission state.
+ * - Plausible visual gibberish/glitch output.
+ * - Must not accidentally equal the original plaintext.
+ * - Must preserve application stability for Unicode, emoji, long messages.
  */
 function generateCorruptedOutput(payload, encoder, decoder) {
   let attemptedDecode = null;
@@ -354,8 +353,9 @@ function generateCorruptedOutput(payload, encoder, decoder) {
   const glitchGlyphs = ['░', '▒', '▓', '?', '¿', '§', '¶', '×', 'ø', '¥', '9x', '#!'];
 
   let seed = (encoder.id * 73 + decoder.id * 31) % 10007;
-  for (let i = 0; i < Math.min(payload.length, 30); i++) {
-    seed = (seed * 33 + payload.charCodeAt(i)) % 10007;
+  const safeChars = Array.from(payload);
+  for (let i = 0; i < Math.min(safeChars.length, 30); i++) {
+    seed = (seed * 33 + safeChars[i].codePointAt(0)) % 10007;
   }
 
   const seededRandom = () => {
@@ -365,11 +365,12 @@ function generateCorruptedOutput(payload, encoder, decoder) {
 
   let base = attemptedDecode && attemptedDecode.length >= 3 ? attemptedDecode : payload;
 
-  if (base.length > 36) {
-    base = base.slice(0, 32) + '...';
+  const baseChars = Array.from(base);
+  if (baseChars.length > 36) {
+    base = baseChars.slice(0, 32).join('') + '...';
   }
 
-  const chars = base.split('');
+  const chars = Array.from(base);
   const corrupted = [];
 
   for (let i = 0; i < chars.length; i++) {
@@ -400,33 +401,179 @@ function generateCorruptedOutput(payload, encoder, decoder) {
   return result;
 }
 
-
-// --- simulation.js ---
-
+// --- audio.js ---
 /**
- * Simulation Engine
- * Manages active encoder/decoder systems, state, timeline orchestration,
- * random selection, message history, and probability calculations.
+ * Audio Synthesizer Module (Web Audio API)
+ * Zero-dependency synthesized sound effects inspired by Apple OS sound design.
+ * Section 18 of agent.md
  */
 
+class AudioEngine {
+  constructor() {
+    this.audioCtx = null;
+    this.soundEnabled = localStorage.getItem('sound_enabled') !== 'false';
+    this.isMutedForExperiment = false;
+  }
+
+  getAudioContext() {
+    if (!this.audioCtx && typeof window.AudioContext !== 'undefined') {
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      this.audioCtx = new AudioCtxClass();
+    }
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume();
+    }
+    return this.audioCtx;
+  }
+
+  setEnabled(val) {
+    this.soundEnabled = val;
+    localStorage.setItem('sound_enabled', val ? 'true' : 'false');
+  }
+
+  isEnabled() {
+    return this.soundEnabled && !this.isMutedForExperiment;
+  }
+
+  setExperimentMute(isMuted) {
+    this.isMutedForExperiment = isMuted;
+  }
+
+  /**
+   * Soft keyboard / dispatch tap
+   */
+  playSendSound() {
+    if (!this.isEnabled()) return;
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(620, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(310, ctx.currentTime + 0.05);
+
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    } catch {}
+  }
+
+  /**
+   * Subtle transit flutter
+   */
+  playTransitSound() {
+    if (!this.isEnabled()) return;
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(540, ctx.currentTime + 0.07);
+
+      gain.gain.setValueAtTime(0.03, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.07);
+    } catch {}
+  }
+
+  /**
+   * Crystal two-tone success chime
+   */
+  playSuccessSound() {
+    if (!this.isEnabled()) return;
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      [587.33, 880].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + i * 0.08);
+
+        gain.gain.setValueAtTime(0.06, now + i * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.08);
+        osc.stop(now + i * 0.08 + 0.35);
+      });
+    } catch {}
+  }
+
+  /**
+   * Soft mismatch / muted tone
+   */
+  playFailureSound() {
+    if (!this.isEnabled()) return;
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(105, now + 0.16);
+
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    } catch {}
+  }
+}
+
+// --- simulation.js ---
+/**
+ * Simulation Engine
+ * Manages active systems, simulation modes (Random, Guaranteed Success, Guaranteed Failure),
+ * timeline orchestration, session statistics, retry/attempt tracking, 100-message experiment,
+ * and uselessness scoring.
+ */
 
 
 class MessagingSimulator {
   constructor(options = {}) {
-    this.systemCount = options.systemCount || 3; // Default to 3 systems per spec
-    this.speed = options.speed || 'normal'; // 'normal' (1.1s), 'fast' (0.55s), 'instant' (0s)
+    this.systemCount = options.systemCount || 3;
+    this.speed = options.speed || 'normal';
+    this.mode = options.mode || 'random'; // 'random', 'guaranteed_success', 'guaranteed_failure'
     this.autoExpandDetails = options.autoExpandDetails || false;
     this.animateResolve = options.animateResolve !== false;
-    this.soundEnabled = options.soundEnabled !== false;
+
     this.history = [];
     this.isTransmitting = false;
     this.listeners = new Map();
+
+    // Session Statistics (Section 10)
+    this.stats = {
+      total: 0,
+      successful: 0,
+      failed: 0,
+      consecutiveFailures: 0,
+      consecutiveSuccesses: 0
+    };
+
+    // Retry / Attempt Tracking (Section 8)
+    this.lastPlaintext = '';
+    this.currentAttempt = 1;
   }
 
-  /**
-   * Register event listener
-   * Events: 'phaseChange', 'messageSent', 'messageReceived', 'configChange', 'error', 'historyCleared'
-   */
   on(event, callback) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
@@ -445,63 +592,55 @@ class MessagingSimulator {
     }
   }
 
-  /**
-   * Get list of currently active paired systems (first N)
-   */
   getActiveSystems() {
     return ALGORITHM_PAIRS.slice(0, this.systemCount);
   }
 
-  /**
-   * Get all 10 systems
-   */
   getAllSystems() {
     return ALGORITHM_PAIRS;
   }
 
-  /**
-   * Set number of active systems (1 to 10)
-   */
   setSystemCount(count) {
     const parsed = Math.max(1, Math.min(10, parseInt(count, 10) || 3));
     this.systemCount = parsed;
     this.emit('configChange', {
       systemCount: this.systemCount,
       probability: this.getProbability(),
-      activeSystems: this.getActiveSystems()
+      activeSystems: this.getActiveSystems(),
+      stats: this.getStats()
     });
     return this.systemCount;
   }
 
-  /**
-   * Calculate theoretical success probability = 1 / N
-   */
+  setMode(mode) {
+    if (['random', 'guaranteed_success', 'guaranteed_failure'].includes(mode)) {
+      this.mode = mode;
+      this.emit('modeChange', { mode: this.mode });
+    }
+  }
+
   getProbability() {
+    if (this.mode === 'guaranteed_success') return 1.0;
+    if (this.mode === 'guaranteed_failure') return 0.0;
     return 1 / this.systemCount;
   }
 
   getProbabilityFormatted() {
     const p = this.getProbability();
-    const percent = (p * 100).toFixed(p === 1 ? 0 : 1);
+    const percent = (p * 100).toFixed(p === 1 || p === 0 ? 0 : 1);
     return {
-      ratio: `1 of ${this.systemCount}`,
+      ratio: this.mode === 'random' ? `1 of ${this.systemCount}` : (this.mode === 'guaranteed_success' ? '100%' : '0%'),
       percent: `${percent}%`,
       value: p
     };
   }
 
-  /**
-   * Set animation speed
-   */
   setSpeed(speed) {
     if (['normal', 'fast', 'instant'].includes(speed)) {
       this.speed = speed;
     }
   }
 
-  /**
-   * Delay helper respecting speed setting
-   */
   _delay(baseMs) {
     if (this.speed === 'instant') return Promise.resolve();
     const multiplier = this.speed === 'fast' ? 0.5 : 1.0;
@@ -509,10 +648,43 @@ class MessagingSimulator {
   }
 
   /**
-   * Core Send Interaction
-   * Implements Sections 6, 7, 8, and 9 of agent.md
+   * Session Statistics Computation (Section 10)
    */
-  async sendMessage(plaintext) {
+  getStats() {
+    const total = this.stats.total;
+    const succ = this.stats.successful;
+    const actualRate = total > 0 ? ((succ / total) * 100).toFixed(1) : '0.0';
+    const expectedRate = (this.getProbability() * 100).toFixed(1);
+
+    return {
+      total,
+      successful: succ,
+      failed: this.stats.failed,
+      actualRate: `${actualRate}%`,
+      expectedRate: `${expectedRate}%`,
+      actualVal: total > 0 ? succ / total : 0,
+      expectedVal: this.getProbability(),
+      currentAttempt: this.currentAttempt,
+      uselessnessScore: this.computeUselessnessScore()
+    };
+  }
+
+  /**
+   * Uselessness Score (Section 13 of agent.md)
+   * A deliberately absurd entertainment metric
+   */
+  computeUselessnessScore() {
+    if (this.stats.total === 0) return 72; // Baseline delightful uselessness
+    const failRate = this.stats.failed / this.stats.total;
+    const systemFactor = this.systemCount * 2.5;
+    const score = Math.min(99, Math.max(15, Math.round(35 + failRate * 45 + systemFactor)));
+    return score;
+  }
+
+  /**
+   * Core Send / Retry Transmission (Sections 2, 4, 8, 9)
+   */
+  async sendMessage(plaintext, isRetry = false) {
     const trimmed = (plaintext || '').trim();
     if (!trimmed) {
       this.emit('error', { message: 'Type a message first.' });
@@ -524,8 +696,24 @@ class MessagingSimulator {
       return null;
     }
 
+    // Check Guaranteed Failure constraint when N = 1 (Section 4)
+    if (this.mode === 'guaranteed_failure' && this.systemCount === 1) {
+      this.emit('error', {
+        message: 'Guaranteed Failure is impossible with 1 system (only 1 decoder exists!). Increase systems to fail reliably.'
+      });
+      return null;
+    }
+
     this.isTransmitting = true;
     const active = this.getActiveSystems();
+
+    // Track attempts
+    if (trimmed === this.lastPlaintext && isRetry) {
+      this.currentAttempt++;
+    } else {
+      this.lastPlaintext = trimmed;
+      this.currentAttempt = 1;
+    }
 
     const messageId = 'msg_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
@@ -533,6 +721,8 @@ class MessagingSimulator {
       id: messageId,
       originalMessage: trimmed,
       timestamp: new Date(),
+      attemptNumber: this.currentAttempt,
+      mode: this.mode,
       encoder: null,
       encodedPayload: '',
       decoder: null,
@@ -542,26 +732,27 @@ class MessagingSimulator {
     };
 
     try {
-      // Step 1: User taps Send (0 ms)
+      // Step 1: Send initiated (0 ms)
       this.emit('phaseChange', {
         phase: 'started',
         step: 1,
-        label: 'Preparing transmission...',
+        label: this.currentAttempt > 1 ? `Retry attempt #${this.currentAttempt}...` : 'Preparing transmission...',
         message: messageRecord
       });
       this.emit('messageSent', { message: messageRecord });
 
-      // Step 2: Encoder selection with shuffle preview (100 ms)
+      // Step 2: Encoder selection (100 ms)
       this.emit('phaseChange', {
         phase: 'selecting_encoder',
         step: 2,
-        label: 'Selecting random encoder...',
+        label: 'Selecting encoder...',
         candidates: active.map((s) => s.encoderName)
       });
 
       await this._delay(150);
       const encoderIndex = Math.floor(Math.random() * active.length);
       const selectedEncoder = active[encoderIndex];
+
       messageRecord.encoder = {
         id: selectedEncoder.id,
         key: selectedEncoder.key,
@@ -578,7 +769,7 @@ class MessagingSimulator {
         candidateCount: active.length
       });
 
-      // Step 3: Encoding message (250 ms)
+      // Step 3: Encoding (250 ms)
       await this._delay(150);
       const encodedPayload = selectedEncoder.encode(trimmed);
       messageRecord.encodedPayload = encodedPayload;
@@ -591,26 +782,39 @@ class MessagingSimulator {
         encoder: selectedEncoder
       });
 
-      // Step 4: Transmitting payload across relay track (500 ms)
+      // Step 4: Transmitting payload through central relay path (500 ms)
       await this._delay(250);
       this.emit('phaseChange', {
         phase: 'transmitting',
         step: 4,
-        label: 'Transmitting payload...',
+        label: 'Transmitting payload through relay...',
         payload: encodedPayload
       });
 
-      // Step 5: Decoder selection with shuffle preview (700 ms)
+      // Step 5: Decoder selection (700 ms)
       this.emit('phaseChange', {
         phase: 'selecting_decoder',
         step: 5,
-        label: 'Selecting random decoder...',
+        label: 'Selecting decoder...',
         candidates: active.map((s) => s.decoderName)
       });
 
       await this._delay(200);
-      const decoderIndex = Math.floor(Math.random() * active.length);
-      const selectedDecoder = active[decoderIndex];
+
+      // Apply Simulation Mode logic (Section 4)
+      let selectedDecoder = null;
+      if (this.mode === 'guaranteed_success') {
+        selectedDecoder = selectedEncoder; // Matching decoder
+      } else if (this.mode === 'guaranteed_failure') {
+        const otherDecoders = active.filter((d) => d.id !== selectedEncoder.id);
+        const randIdx = Math.floor(Math.random() * otherDecoders.length);
+        selectedDecoder = otherDecoders[randIdx] || selectedEncoder;
+      } else {
+        // Random mode (uniformly random independent selection)
+        const decoderIndex = Math.floor(Math.random() * active.length);
+        selectedDecoder = active[decoderIndex];
+      }
+
       messageRecord.decoder = {
         id: selectedDecoder.id,
         key: selectedDecoder.key,
@@ -627,7 +831,7 @@ class MessagingSimulator {
         candidateCount: active.length
       });
 
-      // Step 6: Compatibility Check & Decoding (900 ms)
+      // Step 6: Decoding & Compatibility evaluation (900 ms)
       await this._delay(200);
       const isMatch = selectedEncoder.id === selectedDecoder.id;
       messageRecord.matched = isMatch;
@@ -645,27 +849,53 @@ class MessagingSimulator {
       messageRecord.decodedMessage = finalDecodedText;
       messageRecord.status = isMatch ? 'success' : 'failed';
 
+      // Update Session Stats
+      this.stats.total++;
+      if (isMatch) {
+        this.stats.successful++;
+        this.stats.consecutiveSuccesses++;
+        this.stats.consecutiveFailures = 0;
+      } else {
+        this.stats.failed++;
+        this.stats.consecutiveFailures++;
+        this.stats.consecutiveSuccesses = 0;
+      }
+
       this.emit('phaseChange', {
         phase: 'decoding',
         step: 6,
-        label: isMatch ? 'Decoder matched · Recovering plaintext' : 'Decoder mismatch · Attempting decode',
+        label: isMatch ? 'Decoder matched · Recovering message' : 'Decoder mismatch · Decoding failure',
         matched: isMatch,
         decodedMessage: finalDecodedText
       });
 
-      // Step 7: Result appears in Receiver (1100 ms)
+      // Step 7: Receiver delivery (1100 ms)
       await this._delay(200);
       this.history.push(messageRecord);
+
+      // Check Easter Eggs (Section 14)
+      let easterEgg = null;
+      if (this.stats.consecutiveFailures === 10) {
+        easterEgg = "Are you sure you want to keep doing this? (10 failures in a row)";
+      } else if (this.stats.consecutiveSuccesses === 10) {
+        easterEgg = "Suspiciously competent. (10 successful decodes in a row)";
+      } else if (this.stats.total === 100) {
+        easterEgg = "100 transmissions completed. You could have just texted them.";
+      }
 
       this.emit('phaseChange', {
         phase: 'completed',
         step: 7,
-        label: isMatch ? 'Transmission Complete · Message Recovered' : 'Transmission Complete · Decode Failed',
+        label: isMatch ? 'Transmission Complete · Match' : 'Transmission Complete · Mismatch',
         message: messageRecord,
         matched: isMatch
       });
 
-      this.emit('messageReceived', { message: messageRecord });
+      this.emit('messageReceived', {
+        message: messageRecord,
+        stats: this.getStats(),
+        easterEgg
+      });
 
       return messageRecord;
     } catch (err) {
@@ -678,29 +908,114 @@ class MessagingSimulator {
   }
 
   /**
-   * Clear message history
+   * 100-Message Automated Experiment (Section 12)
+   * Rapidly runs 100 simulated transmissions and emits progressive stats
    */
-  clearHistory() {
+  async run100MessageExperiment(onProgress) {
+    if (this.isTransmitting) return null;
+    this.isTransmitting = true;
+
+    const active = this.getActiveSystems();
+    const sampleText = "The quick brown fox jumps over the lazy dog.";
+    let succCount = 0;
+    let failCount = 0;
+    const historyPoints = [];
+
+    const totalRuns = 100;
+
+    for (let i = 1; i <= totalRuns; i++) {
+      // Pick encoder
+      const enc = active[Math.floor(Math.random() * active.length)];
+      // Pick decoder based on mode
+      let dec = null;
+      if (this.mode === 'guaranteed_success') {
+        dec = enc;
+      } else if (this.mode === 'guaranteed_failure' && active.length > 1) {
+        const others = active.filter((d) => d.id !== enc.id);
+        dec = others[Math.floor(Math.random() * others.length)];
+      } else {
+        dec = active[Math.floor(Math.random() * active.length)];
+      }
+
+      const match = enc.id === dec.id;
+      if (match) succCount++;
+      else failCount++;
+
+      const cumulativeRate = (succCount / i) * 100;
+      historyPoints.push(cumulativeRate);
+
+      if (onProgress && i % 5 === 0) {
+        onProgress({
+          iteration: i,
+          total: totalRuns,
+          successful: succCount,
+          failed: failCount,
+          currentRate: cumulativeRate
+        });
+        await new Promise((r) => setTimeout(r, 12));
+      }
+    }
+
+    const actualRate = succCount; // out of 100
+    const expectedRate = Math.round(this.getProbability() * 100);
+    const difference = actualRate - expectedRate;
+
+    const result = {
+      total: 100,
+      successful: succCount,
+      failed: failCount,
+      actualRate: `${actualRate}%`,
+      expectedRate: `${expectedRate}%`,
+      difference: (difference >= 0 ? `+${difference}%` : `${difference}%`),
+      historyPoints
+    };
+
+    this.isTransmitting = false;
+    this.emit('experimentComplete', result);
+    return result;
+  }
+
+  /**
+   * Reset Conversation (Section 20 of agent.md)
+   * Resets messages, statistics, attempts, uselessness, and experiment.
+   */
+  resetConversation() {
     this.history = [];
+    this.lastPlaintext = '';
+    this.currentAttempt = 1;
+    this.stats = {
+      total: 0,
+      successful: 0,
+      failed: 0,
+      consecutiveFailures: 0,
+      consecutiveSuccesses: 0
+    };
     this.emit('historyCleared');
+    this.emit('configChange', {
+      systemCount: this.systemCount,
+      probability: this.getProbability(),
+      activeSystems: this.getActiveSystems(),
+      stats: this.getStats()
+    });
   }
 }
 
-
 // --- ui.js ---
-
 /**
  * UI Renderer and View Controller
  * Handles DOM updates, Apple-style animations, progressive disclosure,
- * central relay node illumination, character scramble resolution,
- * Web Audio synthesized feedback, and settings sheet.
+ * Central Relay node illumination, character scramble resolution,
+ * simulation modes, retry/attempt counter, stats, and 100-message experiment.
+ * Conforming to updated private/agent.md and private/design.md.
  */
+
 
 class SimulatorUI {
   constructor(simulator) {
     this.simulator = simulator;
+    this.audio = new AudioEngine();
 
-    // Cache DOM Elements
+    // DOM Elements - Panels & Streams
     this.senderStream = document.getElementById('senderStream');
     this.receiverStream = document.getElementById('receiverStream');
     this.senderEmpty = document.getElementById('senderEmpty');
@@ -710,7 +1025,7 @@ class SimulatorUI {
     this.messageInput = document.getElementById('messageInput');
     this.sendButton = document.getElementById('sendBtn');
 
-    // Central Relay Components
+    // Central Relay Components (Visual Centerpiece)
     this.relayStatusPill = document.getElementById('relayStatusPill');
     this.timelineFill = document.getElementById('timelineFill');
     this.payloadStreamBox = document.getElementById('payloadStreamBox');
@@ -726,14 +1041,38 @@ class SimulatorUI {
     this.nodeDecoderName = document.getElementById('nodeDecoderName');
     this.nodeDecoderDesc = document.getElementById('nodeDecoderDesc');
 
-    // Header & Stats Elements
+    // Header, Probability, & Stats Elements
     this.probBadge = document.getElementById('probBadge');
     this.probText = document.getElementById('probText');
     this.probRingCircle = document.getElementById('probRingCircle');
     this.activeSystemsCount = document.getElementById('activeSystemsCount');
-    this.statProbBig = document.getElementById('statProbBig');
-    this.statProbSub = document.getElementById('statProbSub');
+
+    this.statTotalNum = document.getElementById('statTotalNum');
+    this.statSuccNum = document.getElementById('statSuccNum');
+    this.statFailNum = document.getElementById('statFailNum');
+    this.statActualRate = document.getElementById('statActualRate');
+    this.statExpectedRate = document.getElementById('statExpectedRate');
+
+    this.uselessnessScoreVal = document.getElementById('uselessnessScoreVal');
+    this.uselessnessFill = document.getElementById('uselessnessFill');
+    this.uselessnessCaption = document.getElementById('uselessnessCaption');
     this.systemsChipsList = document.getElementById('systemsChipsList');
+
+    // Mode Selector Controls
+    this.modeButtons = document.querySelectorAll('.mode-btn');
+
+    // Experiment Trigger & Modal
+    this.experimentTriggerBtn = document.getElementById('experimentTriggerBtn');
+    this.experimentModal = document.getElementById('experimentModal');
+    this.closeExperimentBtn = document.getElementById('closeExperimentBtn');
+    this.expProgressFill = document.getElementById('expProgressFill');
+    this.expProgressText = document.getElementById('expProgressText');
+    this.expResultsBox = document.getElementById('expResultsBox');
+    this.expSuccVal = document.getElementById('expSuccVal');
+    this.expFailVal = document.getElementById('expFailVal');
+    this.expActualVal = document.getElementById('expActualVal');
+    this.expExpectedVal = document.getElementById('expExpectedVal');
+    this.expDiffBadge = document.getElementById('expDiffBadge');
 
     // Settings Modal
     this.settingsModal = document.getElementById('settingsModal');
@@ -756,10 +1095,6 @@ class SimulatorUI {
 
     this.toastNotice = document.getElementById('toastNotice');
 
-    // Web Audio Synthesizer
-    this.audioCtx = null;
-    this.soundEnabled = localStorage.getItem('sound_enabled') !== 'false';
-
     this.init();
   }
 
@@ -770,148 +1105,57 @@ class SimulatorUI {
     this.initAudioState();
     this.updateSystemDisplays();
     this.renderActiveSystemsList();
+    this.updateStatsDisplay(this.simulator.getStats());
   }
 
-  /**
-   * Sound synthesizer using Web Audio API (Zero external assets)
-   */
-  getAudioContext() {
-    if (!this.audioCtx && typeof window.AudioContext !== 'undefined') {
-      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      this.audioCtx = new AudioCtxClass();
-    }
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
-    }
-    return this.audioCtx;
-  }
-
-  playSendSound() {
-    if (!this.soundEnabled) return;
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(640, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.06);
-
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.06);
-    } catch {
-      // Audio autoplay policy fallback
-    }
-  }
-
-  playTransitSound() {
-    if (!this.soundEnabled) return;
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(420, ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(560, ctx.currentTime + 0.08);
-
-      gain.gain.setValueAtTime(0.03, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.08);
-    } catch {}
-  }
-
-  playSuccessSound() {
-    if (!this.soundEnabled) return;
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-      // Gentle dual-tone bell / chime
-      const now = ctx.currentTime;
-      [587.33, 880].forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now + i * 0.08);
-
-        gain.gain.setValueAtTime(0.06, now + i * 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now + i * 0.08);
-        osc.stop(now + i * 0.08 + 0.35);
-      });
-    } catch {}
-  }
-
-  playFailureSound() {
-    if (!this.soundEnabled) return;
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(190, now);
-      osc.frequency.exponentialRampToValueAtTime(110, now + 0.18);
-
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.18);
-    } catch {}
-  }
-
-  /**
-   * Bind event listeners from simulator engine
-   */
   bindSimulatorEvents() {
     this.simulator.on('messageSent', ({ message }) => {
       this.hideEmptyStates();
       this.appendSenderMessage(message);
       this.sendButton.disabled = true;
       this.messageInput.disabled = true;
-      this.playSendSound();
+      this.audio.playSendSound();
     });
 
     this.simulator.on('phaseChange', (data) => {
       this.renderTransmissionPhase(data);
     });
 
-    this.simulator.on('messageReceived', ({ message }) => {
+    this.simulator.on('messageReceived', ({ message, stats, easterEgg }) => {
       this.appendReceiverMessage(message);
       this.sendButton.disabled = false;
       this.messageInput.disabled = false;
       this.messageInput.focus();
 
       if (message.matched) {
-        this.playSuccessSound();
+        this.audio.playSuccessSound();
       } else {
-        this.playFailureSound();
+        this.audio.playFailureSound();
+      }
+
+      if (stats) {
+        this.updateStatsDisplay(stats);
+      }
+
+      if (easterEgg) {
+        this.showToast(easterEgg, 4000);
       }
     });
 
-    this.simulator.on('configChange', () => {
+    this.simulator.on('configChange', ({ stats }) => {
       this.updateSystemDisplays();
       this.renderActiveSystemsList();
+      if (stats) this.updateStatsDisplay(stats);
+    });
+
+    this.simulator.on('modeChange', ({ mode }) => {
+      this.updateModeUI(mode);
+      this.updateSystemDisplays();
     });
 
     this.simulator.on('historyCleared', () => {
       this.resetChatUI();
+      this.updateStatsDisplay(this.simulator.getStats());
     });
 
     this.simulator.on('error', ({ message }) => {
@@ -922,10 +1166,8 @@ class SimulatorUI {
     });
   }
 
-  /**
-   * Bind DOM user interactions
-   */
   bindUserEvents() {
+    // Send form
     this.composerForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const text = this.messageInput.value;
@@ -934,7 +1176,7 @@ class SimulatorUI {
         this.showToast('Type a message first.');
         return;
       }
-      this.simulator.sendMessage(text);
+      this.simulator.sendMessage(text, false);
       this.messageInput.value = '';
     });
 
@@ -947,20 +1189,42 @@ class SimulatorUI {
       });
     });
 
-    // Settings Modal
-    this.openSettingsBtn.addEventListener('click', () => this.openModal());
-    this.closeSettingsBtn.addEventListener('click', () => this.closeModal());
-    this.settingsModal.addEventListener('click', (e) => {
-      if (e.target === this.settingsModal) this.closeModal();
+    // Mode Selector Segmented Buttons (Header)
+    this.modeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const selectedMode = btn.getAttribute('data-mode');
+        this.simulator.setMode(selectedMode);
+      });
     });
 
+    // Settings Modal
+    this.openSettingsBtn.addEventListener('click', () => this.openModal(this.settingsModal));
+    this.closeSettingsBtn.addEventListener('click', () => this.closeModal(this.settingsModal));
+    this.settingsModal.addEventListener('click', (e) => {
+      if (e.target === this.settingsModal) this.closeModal(this.settingsModal);
+    });
+
+    // Experiment Trigger & Modal
+    if (this.experimentTriggerBtn) {
+      this.experimentTriggerBtn.addEventListener('click', () => this.startExperiment());
+    }
+    if (this.closeExperimentBtn) {
+      this.closeExperimentBtn.addEventListener('click', () => this.closeModal(this.experimentModal));
+    }
+    if (this.experimentModal) {
+      this.experimentModal.addEventListener('click', (e) => {
+        if (e.target === this.experimentModal) this.closeModal(this.experimentModal);
+      });
+    }
+
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.settingsModal.classList.contains('open')) {
-        this.closeModal();
+      if (e.key === 'Escape') {
+        if (this.settingsModal.classList.contains('open')) this.closeModal(this.settingsModal);
+        if (this.experimentModal && this.experimentModal.classList.contains('open')) this.closeModal(this.experimentModal);
       }
     });
 
-    // Stepper
+    // Systems Stepper
     this.stepperMinus.addEventListener('click', () => {
       const current = this.simulator.systemCount;
       if (current > 1) {
@@ -1006,7 +1270,7 @@ class SimulatorUI {
     }
 
     if (this.chkSound) {
-      this.chkSound.checked = this.soundEnabled;
+      this.chkSound.checked = this.audio.soundEnabled;
       this.chkSound.addEventListener('change', (e) => {
         this.setSoundEnabled(e.target.checked);
       });
@@ -1014,15 +1278,15 @@ class SimulatorUI {
 
     if (this.soundToggleHeaderBtn) {
       this.soundToggleHeaderBtn.addEventListener('click', () => {
-        this.setSoundEnabled(!this.soundEnabled);
+        this.setSoundEnabled(!this.audio.soundEnabled);
       });
     }
 
-    // Clear history
+    // Reset Conversation
     this.clearHistoryBtn.addEventListener('click', () => {
-      this.simulator.clearHistory();
-      this.closeModal();
-      this.showToast('Conversation cleared');
+      this.simulator.resetConversation();
+      this.closeModal(this.settingsModal);
+      this.showToast('Conversation & session statistics reset');
     });
 
     // Theme toggle
@@ -1030,8 +1294,7 @@ class SimulatorUI {
   }
 
   setSoundEnabled(val) {
-    this.soundEnabled = val;
-    localStorage.setItem('sound_enabled', val ? 'true' : 'false');
+    this.audio.setEnabled(val);
     if (this.chkSound) this.chkSound.checked = val;
     this.updateSoundIcon();
     this.showToast(val ? 'Sound effects enabled' : 'Sound effects muted');
@@ -1039,18 +1302,24 @@ class SimulatorUI {
 
   initAudioState() {
     this.updateSoundIcon();
-    if (this.chkSound) this.chkSound.checked = this.soundEnabled;
+    if (this.chkSound) this.chkSound.checked = this.audio.soundEnabled;
   }
 
   updateSoundIcon() {
     if (!this.soundHeaderIcon) return;
-    if (this.soundEnabled) {
+    if (this.audio.soundEnabled) {
       this.soundHeaderIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
       this.soundToggleHeaderBtn.title = 'Mute Sounds';
     } else {
       this.soundHeaderIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
       this.soundToggleHeaderBtn.title = 'Enable Sounds';
     }
+  }
+
+  updateModeUI(mode) {
+    this.modeButtons.forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+    });
   }
 
   setSystems(count) {
@@ -1061,9 +1330,6 @@ class SimulatorUI {
     });
   }
 
-  /**
-   * Update header, cards, and chips according to active systems & probability
-   */
   updateSystemDisplays() {
     const prob = this.simulator.getProbabilityFormatted();
     const active = this.simulator.getActiveSystems();
@@ -1071,20 +1337,13 @@ class SimulatorUI {
     this.probText.textContent = `${prob.percent} match`;
     this.activeSystemsCount.textContent = `${this.simulator.systemCount} systems`;
 
-    // Update SVG progress ring
+    // Circular SVG Progress Ring
     if (this.probRingCircle) {
       const radius = 9;
       const circumference = 2 * Math.PI * radius;
       const offset = circumference * (1 - prob.value);
       this.probRingCircle.style.strokeDasharray = `${circumference}`;
       this.probRingCircle.style.strokeDashoffset = `${offset}`;
-    }
-
-    if (this.statProbBig) {
-      this.statProbBig.textContent = prob.percent;
-    }
-    if (this.statProbSub) {
-      this.statProbSub.textContent = `${prob.ratio} decoders compatible`;
     }
 
     if (this.stepperVal) {
@@ -1095,6 +1354,27 @@ class SimulatorUI {
       this.systemsChipsList.innerHTML = active
         .map((s) => `<span class="system-tag" title="${this.escapeHTML(s.description)}">${s.name}</span>`)
         .join('');
+    }
+  }
+
+  updateStatsDisplay(stats) {
+    if (!stats) return;
+    if (this.statTotalNum) this.statTotalNum.textContent = stats.total;
+    if (this.statSuccNum) this.statSuccNum.textContent = stats.successful;
+    if (this.statFailNum) this.statFailNum.textContent = stats.failed;
+    if (this.statActualRate) this.statActualRate.textContent = stats.actualRate;
+    if (this.statExpectedRate) this.statExpectedRate.textContent = stats.expectedRate;
+
+    // Uselessness Score (Section 13)
+    const score = stats.uselessnessScore || 72;
+    if (this.uselessnessScoreVal) this.uselessnessScoreVal.textContent = `${score}%`;
+    if (this.uselessnessFill) this.uselessnessFill.style.width = `${score}%`;
+
+    if (this.uselessnessCaption) {
+      let caption = `${score}% useless. Excellent.`;
+      if (score > 90) caption = `${score}% useless. Masterpiece of inefficiency.`;
+      else if (score < 40) caption = `${score}% useless. Suspiciously functional.`;
+      this.uselessnessCaption.textContent = caption;
     }
   }
 
@@ -1121,19 +1401,19 @@ class SimulatorUI {
     if (this.receiverEmpty) this.receiverEmpty.style.display = 'none';
   }
 
-  /**
-   * Render Sender message bubble
-   */
   appendSenderMessage(msg) {
     const timeStr = this.formatTime(msg.timestamp);
     const card = document.createElement('div');
     card.className = 'message-card sender-card';
     card.id = `sender_${msg.id}`;
 
+    const attemptTag = msg.attemptNumber > 1 ? `<span class="attempt-badge">Attempt #${msg.attemptNumber}</span>` : '';
+
     card.innerHTML = `
       <div class="message-bubble">${this.escapeHTML(msg.originalMessage)}</div>
       <div class="message-meta">
-        <span>Sent</span> · <span>${timeStr}</span>
+        ${attemptTag}
+        <span>Sent · ${timeStr}</span>
       </div>
     `;
 
@@ -1141,9 +1421,6 @@ class SimulatorUI {
     this.senderStream.scrollTop = this.senderStream.scrollHeight;
   }
 
-  /**
-   * Render Receiver message bubble with scramble resolution animation & details
-   */
   appendReceiverMessage(msg) {
     const timeStr = this.formatTime(msg.timestamp);
     const isSuccess = msg.matched;
@@ -1153,7 +1430,26 @@ class SimulatorUI {
 
     const statusTag = isSuccess
       ? `<span class="status-tag tag-success">✓ Decoded</span>`
-      : `<span class="status-tag tag-failure">✗ Decode Failed</span>`;
+      : `<span class="status-tag tag-failure">✕ Decode Failed</span>`;
+
+    const celebrationBadge = (isSuccess && msg.attemptNumber > 1)
+      ? `<span class="attempt-badge celebrate">Decoded on attempt #${msg.attemptNumber}</span>`
+      : '';
+
+    const failureExplanation = !isSuccess
+      ? `<div class="failure-explanation">The receiver didn't have the right decoder (${this.escapeHTML(msg.decoder.name)} vs ${this.escapeHTML(msg.encoder.name)}).</div>`
+      : '';
+
+    // Retry "Try Again" Button (Section 8 of agent.md)
+    const retryBtnHtml = !isSuccess
+      ? `<button type="button" class="retry-btn" data-retry="${this.escapeHTML(msg.originalMessage)}">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+             <polyline points="1 4 1 10 7 10"/>
+             <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+           </svg>
+           <span>Try Again</span>
+         </button>`
+      : '';
 
     const summaryLabel = isSuccess
       ? '✓ Transmission details (Match)'
@@ -1165,8 +1461,11 @@ class SimulatorUI {
       <div class="message-bubble message-content" id="content_${msg.id}"></div>
       <div class="message-meta">
         ${statusTag}
+        ${celebrationBadge}
         <span>${timeStr}</span>
       </div>
+      ${failureExplanation}
+      ${retryBtnHtml}
 
       <details class="transmission-details" ${autoOpen}>
         <summary><span>${summaryLabel}</span></summary>
@@ -1203,6 +1502,31 @@ class SimulatorUI {
               ${isSuccess ? 'Decode successful' : 'Decode failed'}
             </span>
           </div>
+          <div class="details-row">
+            <span class="details-label">ATTEMPT</span>
+            <span class="details-val">#${msg.attemptNumber}</span>
+          </div>
+
+          <!-- Section 16 of agent.md: Expanded Transmission Timeline -->
+          <div class="event-timeline-section" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--separator);">
+            <div class="timeline-step">✓ Message created</div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step">✓ ${this.escapeHTML(msg.encoder.encoderName)} selected</div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step">✓ Message encoded</div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step">✓ Payload transmitted</div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step">✓ ${this.escapeHTML(msg.decoder.decoderName)} selected</div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step ${isSuccess ? 'step-success' : 'step-failure'}">
+              ${isSuccess ? '✓ Decoder matched' : '✕ Decoder mismatch'}
+            </div>
+            <div class="timeline-arrow">↓</div>
+            <div class="timeline-step ${isSuccess ? 'step-success' : 'step-failure'}">
+              ${isSuccess ? '✓ Original plaintext restored' : '✕ Message corrupted'}
+            </div>
+          </div>
         </div>
       </details>
     `;
@@ -1210,7 +1534,16 @@ class SimulatorUI {
     this.receiverStream.appendChild(card);
     this.receiverStream.scrollTop = this.receiverStream.scrollHeight;
 
-    // Attach copy button handler
+    // Retry Button Click
+    const retryBtn = card.querySelector('.retry-btn');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => {
+        const textToRetry = retryBtn.getAttribute('data-retry');
+        this.simulator.sendMessage(textToRetry, true);
+      });
+    }
+
+    // Copy Payload Click
     const copyBtn = card.querySelector('.copy-payload-btn');
     if (copyBtn) {
       copyBtn.addEventListener('click', (e) => {
@@ -1226,7 +1559,7 @@ class SimulatorUI {
       });
     }
 
-    // Run character-by-character resolving animation
+    // Scramble Text Resolving Effect
     const contentEl = card.querySelector(`#content_${msg.id}`);
     if (this.simulator.animateResolve && this.simulator.speed !== 'instant') {
       this.animateTextResolve(contentEl, msg.decodedMessage);
@@ -1235,10 +1568,6 @@ class SimulatorUI {
     }
   }
 
-  /**
-   * Scramble / Matrix Resolve Text Effect
-   * Glitches characters and settles them into the final text
-   */
   animateTextResolve(element, targetText) {
     const glyphs = '░▒▓01!?#*&%^$@abcdefghijklmnopqrstuvwxyz';
     const totalFrames = 12;
@@ -1267,46 +1596,15 @@ class SimulatorUI {
     }, 28);
   }
 
-  /**
-   * Subtle candidate shuffle animation
-   */
-  shuffleCandidateNames(targetElement, candidates, finalName, onComplete) {
-    if (!candidates || candidates.length <= 1) {
-      targetElement.textContent = finalName;
-      if (onComplete) onComplete();
-      return;
-    }
-
-    let iterations = 0;
-    const maxIterations = 4;
-    const interval = setInterval(() => {
-      iterations++;
-      const randCand = candidates[Math.floor(Math.random() * candidates.length)];
-      targetElement.textContent = randCand;
-
-      if (iterations >= maxIterations) {
-        clearInterval(interval);
-        targetElement.textContent = `${finalName} ✓`;
-        if (onComplete) onComplete();
-      }
-    }, 40);
-  }
-
-  /**
-   * Update the Central Transmission Relay nodes and status
-   */
   renderTransmissionPhase(data) {
-    const { phase, step, label, payload, encoder, decoder, matched, candidates } = data;
+    const { phase, step, label, payload, encoder, decoder, matched } = data;
 
-    // Update status text
     this.relayStatusPill.textContent = label;
     this.relayStatusPill.classList.toggle('active', phase !== 'completed');
 
-    // Progress bar fill (0 to 100%)
     const pct = Math.min(100, Math.round((step / 7) * 100));
     this.timelineFill.style.width = `${pct}%`;
 
-    // Reset node active classes
     const nodes = [this.nodeSender, this.nodeEncoder, this.nodeDecoder, this.nodeReceiver];
     nodes.forEach((n) => {
       n.classList.remove('active', 'active-success', 'active-failed');
@@ -1326,13 +1624,13 @@ class SimulatorUI {
 
       case 'selecting_encoder':
         this.nodeEncoder.classList.add('active');
-        this.nodeEncoderDesc.textContent = 'Shuffling available encoders...';
+        this.nodeEncoderDesc.textContent = 'Shuffling candidate systems...';
         break;
 
       case 'encoder_selected':
         this.nodeEncoder.classList.add('active');
         this.nodeEncoderName.textContent = `${encoder.name} ✓`;
-        this.nodeEncoderDesc.textContent = `Selected: Pair #${encoder.id}`;
+        this.nodeEncoderDesc.textContent = `Selected: System #${encoder.id}`;
         break;
 
       case 'encoded':
@@ -1347,18 +1645,18 @@ class SimulatorUI {
         if (this.travelingPayload) {
           this.travelingPayload.classList.add('traveling');
         }
-        this.playTransitSound();
+        this.audio.playTransitSound();
         break;
 
       case 'selecting_decoder':
         this.nodeDecoder.classList.add('active');
-        this.nodeDecoderDesc.textContent = 'Shuffling available decoders...';
+        this.nodeDecoderDesc.textContent = 'Shuffling candidate decoders...';
         break;
 
       case 'decoder_selected':
         this.nodeDecoder.classList.add('active');
-        this.nodeDecoderName.textContent = `${decoder.name} ✓`;
-        this.nodeDecoderDesc.textContent = `Selected: Pair #${decoder.id}`;
+        this.nodeDecoderName.textContent = `${decoder.name} ${matched ? '✓' : '✕'}`;
+        this.nodeDecoderDesc.textContent = `Selected: System #${decoder.id}`;
         if (this.travelingPayload) this.travelingPayload.classList.remove('traveling');
         break;
 
@@ -1368,9 +1666,67 @@ class SimulatorUI {
 
       case 'completed':
         this.nodeReceiver.classList.add(matched ? 'active-success' : 'active-failed');
-        this.relayStatusPill.textContent = matched ? 'Transmission Complete (Match)' : 'Transmission Complete (Mismatch)';
+        this.relayStatusPill.textContent = matched ? 'Transmission Complete · Match' : 'Transmission Complete · Mismatch';
         break;
     }
+  }
+
+  /**
+   * 100-Message Automated Experiment UI (Section 12 of agent.md)
+   */
+  async startExperiment() {
+    this.openModal(this.experimentModal);
+    this.expProgressFill.style.width = '0%';
+    this.expProgressText.textContent = 'Running 100 simulations...';
+    this.expResultsBox.style.display = 'none';
+
+    // Mute sound during bulk experiment
+    this.audio.setExperimentMute(true);
+
+    const result = await this.simulator.run100MessageExperiment((progress) => {
+      const pct = progress.iteration;
+      this.expProgressFill.style.width = `${pct}%`;
+      this.expProgressText.textContent = `Simulating: ${progress.iteration} / 100 (${progress.successful} matched, ${progress.failed} failed)`;
+    });
+
+    this.audio.setExperimentMute(false);
+
+    if (result) {
+      this.expResultsBox.style.display = 'flex';
+      this.expSuccVal.textContent = result.successful;
+      this.expFailVal.textContent = result.failed;
+      this.expActualVal.textContent = result.actualRate;
+      this.expExpectedVal.textContent = result.expectedRate;
+
+      this.expDiffBadge.textContent = result.difference;
+      this.expDiffBadge.className = `exp-diff-tag ${result.difference.startsWith('+') ? 'diff-positive' : 'diff-negative'}`;
+      this.expProgressText.textContent = 'Experiment complete!';
+
+      this.renderExperimentChart(result);
+    }
+  }
+
+  /**
+   * Render SVG Cumulative Success Rate Line Chart (Section 12 of agent.md)
+   */
+  renderExperimentChart(result) {
+    const refLine = document.getElementById('expChartRefLine');
+    const path = document.getElementById('expChartPath');
+    if (!refLine || !path || !result.historyPoints) return;
+
+    const expectedPct = this.simulator.getProbability() * 100;
+    const refY = (100 - Math.min(100, Math.max(0, expectedPct))).toFixed(1);
+    refLine.setAttribute('y1', refY);
+    refLine.setAttribute('y2', refY);
+
+    const pts = result.historyPoints;
+    let d = '';
+    for (let i = 0; i < pts.length; i++) {
+      const x = ((i / (pts.length - 1)) * 300).toFixed(1);
+      const y = (100 - Math.min(100, Math.max(0, pts[i]))).toFixed(1);
+      d += `${i === 0 ? 'M' : 'L'} ${x} ${y} `;
+    }
+    path.setAttribute('d', d.trim());
   }
 
   resetChatUI() {
@@ -1405,27 +1761,28 @@ class SimulatorUI {
     }, 400);
   }
 
-  showToast(text) {
+  showToast(text, duration = 2400) {
     if (!this.toastNotice) return;
     this.toastNotice.textContent = text;
     this.toastNotice.classList.add('show');
     clearTimeout(this._toastTimer);
     this._toastTimer = setTimeout(() => {
       this.toastNotice.classList.remove('show');
-    }, 2400);
+    }, duration);
   }
 
-  openModal() {
-    this.settingsModal.classList.add('open');
-    this.settingsModal.setAttribute('aria-hidden', 'false');
+  openModal(modalEl) {
+    if (!modalEl) return;
+    modalEl.classList.add('open');
+    modalEl.setAttribute('aria-hidden', 'false');
   }
 
-  closeModal() {
-    this.settingsModal.classList.remove('open');
-    this.settingsModal.setAttribute('aria-hidden', 'true');
+  closeModal(modalEl) {
+    if (!modalEl) return;
+    modalEl.classList.remove('open');
+    modalEl.setAttribute('aria-hidden', 'true');
   }
 
-  /* Theme Management */
   initTheme() {
     const saved = localStorage.getItem('theme');
     if (saved) {
@@ -1447,7 +1804,7 @@ class SimulatorUI {
     document.documentElement.setAttribute('data-theme', theme);
     if (this.themeIcon) {
       this.themeIcon.innerHTML = theme === 'dark'
-        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="23" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
         : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
     }
   }
@@ -1468,15 +1825,11 @@ class SimulatorUI {
   }
 }
 
-
 // --- app.js ---
-
 /**
  * Application Entry Point
  * Initializes simulator engine, UI view controller, and system event bindings.
  */
-
-
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1497,6 +1850,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   console.log('⚡ Random Encoder / Decoder Messaging Simulator initialized.');
 });
-
 
 })();
