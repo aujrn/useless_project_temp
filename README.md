@@ -2,12 +2,11 @@
 
 
 
-# [Project Name] 🎯
-
+# Random Relay 🎯
+*The Apple-Inspired Random Encoder / Decoder Messaging Simulator*
 
 ## Basic Details
 ### Team Name: [Name]
-
 
 ### Team Members
 - Team Lead: [Name] - [College]
@@ -15,34 +14,37 @@
 - Member 3: [Name] - [College]
 
 ### Project Description
-[2-3 lines about what your project does]
+Random Relay is an Apple-inspired messaging simulator that routes messages through randomly selected reversible encoders and decoders. If the receiver randomly draws the matching decoder, the original plaintext is recovered; otherwise, delightfully authentic corrupted gibberish is delivered.
 
 ### The Problem (that doesn't exist)
-[What ridiculous problem are you solving?]
+What if sending a text message required gambling on whether the universe randomly picks the same cryptographic key for the recipient as it did for the sender?
 
 ### The Solution (that nobody asked for)
-[How are you solving it? Keep it fun!]
+A clean, minimal, dual-panel chat interface featuring a live central transmission relay. Watch your message get scrambled by one of N encoders, transmit across the network, and attempt to resolve under a randomly chosen decoder with an exact \(1/N\) probability of success.
 
 ## Technical Details
 ### Technologies/Components Used
 For Software:
-- [Languages used]
-- [Frameworks used]
-- [Libraries used]
-- [Tools used]
-
-For Hardware:
-- [List main components]
-- [List specifications]
-- [List tools required]
+- HTML5 (Semantic dual-panel layout, accessible dialog modals, live ARIA status)
+- CSS3 (Apple design tokens, SF Pro typography, dynamic light/dark mode, frosted glass `backdrop-filter`, reduced-motion support)
+- Vanilla JavaScript (ES6+ modular architecture, zero dependencies, deterministic paired reversible algorithms)
+- Python 3 (Local testing & verification)
 
 ### Implementation
 For Software:
 # Installation
-[commands]
+No installation or node build step required! Simply clone and open:
+```bash
+git clone https://github.com/aujrn/useless_project_temp.git
+cd useless_project_temp
+```
 
 # Run
-[commands]
+Open `index.html` directly in any modern browser, or spin up a quick local server:
+```bash
+python -m http.server 8000
+```
+Then visit `http://localhost:8000`.
 
 ### Project Documentation
 For Software:
